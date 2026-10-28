@@ -122,6 +122,7 @@ const held = new Set();
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || $('guide').open) return;
   if (e.code === 'Space') { e.preventDefault(); return hint(); }
+  if (e.code === 'Enter' && !e.repeat && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); return startPractice(); }
   const n = KEYMAP[e.code];
   if (!n || e.repeat) return;
   e.preventDefault();
@@ -205,7 +206,6 @@ function setLevel(v) {
 function setSong(i) {
   song = SONGS[i];
   save('song', String(i));
-  $('songTitle').textContent = song.title;
   setLevel(level);
 }
 
@@ -437,12 +437,12 @@ $('pattern').onchange = (e) => {
 };
 document.querySelectorAll('[data-hand]').forEach((b) => { b.onclick = () => { b.blur(); setHand(b.dataset.hand); }; });
 document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === hand));
-SONGS.forEach((x, i) => $('song').add(new Option(`${x.title} — ${x.artist}`, i)));
+SONGS.forEach((x, i) => $('song').add(new Option(`${x.title} · ${x.artist}`, i)));
 $('song').value = SONGS.indexOf(song);
 $('song').onchange = (e) => { e.target.blur(); setSong(+e.target.value); };
 const info = () => {
   const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
-  $('songArtist').textContent = `${song.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ' : 'bản gốc theo sheet piano'} · nhịp 4/4 (Đô trưởng)`;
+  $('songArtist').textContent = `${level === 'easy' ? 'Bản dễ' : 'Bản gốc (sheet)'} · ${r} nốt tay phải · ${l} tay trái · 4/4, Đô trưởng`;
 };
 setInput(input);
 setSong(SONGS.indexOf(song));

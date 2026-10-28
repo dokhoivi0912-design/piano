@@ -10,10 +10,15 @@
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo">𝄞</span><div><h1>Grand Piano</h1><p>Đàn piano bằng bàn phím máy tính</p></div></div>
+  <div class="brand"><span class="logo" aria-hidden="true">𝄞</span><h1>Grand Piano</h1></div>
+  <label class="song-pick">
+    <span class="eyebrow">♪ Chọn bài</span>
+    <select id="song" aria-label="Chọn bài"></select>
+  </label>
+  <p class="muted info" id="songArtist"></p>
   <nav>
     <div class="seg" role="group" aria-label="Chọn cách chơi">
-      <button class="btn" data-input="keys">⌨️ Bàn phím máy tính</button>
+      <button class="btn" data-input="keys">⌨️ Bàn phím</button>
       <button class="btn" data-input="midi">🎹 Đàn MIDI</button>
     </div>
     <label class="toggle"><input type="checkbox" id="showNotes" checked> Tên nốt</label>
@@ -21,52 +26,45 @@
   </nav>
 </header>
 
-<main>
-  <section class="panel song">
-    <div class="song-head">
-      <div>
-        <span class="eyebrow">Bài luyện tập · <select id="song" aria-label="Chọn bài"></select></span>
-        <h2 id="songTitle"></h2>
-        <p class="muted" id="songArtist"></p>
-      </div>
-      <div class="controls">
-        <div class="seg" role="group" aria-label="Chọn bản">
-          <button class="btn" data-level="easy">Dễ</button>
-          <button class="btn" data-level="orig">Gốc</button>
-        </div>
-        <select class="btn" id="pattern" aria-label="Kiểu đệm tay trái">
-          <option value="block">Đệm: Hợp âm khối</option>
-          <option value="beats">Đệm: Đều 4 phách</option>
-          <option value="bass">Đệm: Bass + hợp âm</option>
-        </select>
-        <div class="seg" id="handSeg" role="group" aria-label="Chọn tay luyện">
-          <button class="btn" data-hand="R">Tay phải</button>
-          <button class="btn" data-hand="L">Tay trái</button>
-          <button class="btn" data-hand="RL">Hai tay</button>
-        </div>
-        <select class="btn" id="part" aria-label="Chọn đoạn">
-          <option value="">Cả bài</option>
-        </select>
-        <button class="btn gold" id="practiceBtn">Bắt đầu luyện</button>
-        <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
-        <label class="toggle"><input type="checkbox" id="metro" checked> Gõ nhịp</label>
-        <label class="tempo">Tốc độ <input type="range" id="tempo" min="50" max="130" step="1"> <output id="tempoOut"></output></label>
-      </div>
-    </div>
-    <div class="progress"><div id="bar"></div></div>
-    <p class="status" id="status">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
-    <p class="midi-state" id="midiState"></p>
-    <p class="legend"><span class="dot r"></span>Tay phải (giai điệu) <span class="dot l"></span>Tay trái (hợp âm) <span class="dot ok"></span>Nốt đã bấm đúng</p>
-    <p class="tip">Mẹo: <kbd>Space</kbd> nghe lại nốt cần đánh · nốt dài = giữ phím lâu hơn · nốt rơi sẽ chờ đến khi bạn bấm đúng.</p>
-  </section>
+<section class="toolbar" aria-label="Điều khiển luyện tập">
+  <button class="btn gold" id="practiceBtn" title="Phím tắt: Enter">Bắt đầu luyện</button>
+  <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
+  <span class="sep"></span>
+  <div class="seg" role="group" aria-label="Chọn bản">
+    <button class="btn" data-level="easy">Dễ</button>
+    <button class="btn" data-level="orig">Gốc</button>
+  </div>
+  <select class="btn" id="part" aria-label="Chọn đoạn">
+    <option value="">Cả bài</option>
+  </select>
+  <select class="btn" id="pattern" aria-label="Kiểu đệm tay trái">
+    <option value="block">Đệm: Hợp âm khối</option>
+    <option value="beats">Đệm: Đều 4 phách</option>
+    <option value="bass">Đệm: Bass + hợp âm</option>
+  </select>
+  <div class="seg" id="handSeg" role="group" aria-label="Chọn tay luyện">
+    <button class="btn" data-hand="R">Tay phải</button>
+    <button class="btn" data-hand="L">Tay trái</button>
+    <button class="btn" data-hand="RL">Hai tay</button>
+  </div>
+  <label class="toggle"><input type="checkbox" id="metro" checked> Gõ nhịp</label>
+  <label class="tempo">Tốc độ <input type="range" id="tempo" min="50" max="130" step="1"> <output id="tempoOut"></output></label>
+</section>
 
-  <section class="piano-wrap">
-    <div class="stage">
-      <canvas id="fall"></canvas>
-      <div class="piano-lid"></div>
-      <div class="piano" id="piano"></div>
-    </div>
-  </section>
+<div class="progress"><div id="bar"></div></div>
+<div class="statusline">
+  <p class="status" id="status" aria-live="polite">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
+  <p class="midi-state" id="midiState"></p>
+  <p class="legend"><span class="dot r"></span>Tay phải <span class="dot l"></span>Tay trái <span class="dot ok"></span>Đã bấm đúng</p>
+  <p class="tip"><kbd>Enter</kbd> luyện lại · <kbd>Space</kbd> gợi ý nốt</p>
+</div>
+
+<main class="piano-wrap">
+  <div class="stage">
+    <canvas id="fall"></canvas>
+    <div class="piano-lid"></div>
+    <div class="piano" id="piano"></div>
+  </div>
 </main>
 
 <dialog id="guide">
@@ -106,7 +104,7 @@
       ② bấm <i>Nghe mẫu</i> để quen giai điệu ·
       ③ bấm <i>Bắt đầu luyện</i>: nốt vàng rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
       Chữ trên nốt rơi là phím máy tính cần bấm. Nốt càng dài thì giữ càng lâu. Bấm sai thì phím nháy đỏ.</li>
-    <li>Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
+    <li>Luyện xong muốn luyện lại? Bấm <kbd>Enter</kbd> — không cần lướt tìm nút. Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
     <li>Mẹo: luyện chậm từng đoạn trước, thuộc rồi mới tăng tốc độ. Nếu phím không kêu, thử tắt bộ gõ tiếng Việt.</li>
   </ol>
   <form method="dialog"><button class="btn gold">Đã hiểu</button></form>
