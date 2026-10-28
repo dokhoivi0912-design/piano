@@ -8,6 +8,7 @@
   --gold-hi: #e8cf98;
   --ivory: #f7f4ec;
   --wrong: #d0485a;
+  --black-w: 30px;
 }
 * { box-sizing: border-box; }
 body {
@@ -33,6 +34,9 @@ nav { display: flex; gap: 14px; align-items: center; }
 .btn:hover { border-color: var(--gold); }
 .btn.gold { background: linear-gradient(180deg, var(--gold-hi), var(--gold)); color: #17130b; border: 0; }
 .btn.ghost { background: transparent; }
+.seg { display: flex; padding: 3px; gap: 3px; background: #0e0e12; border: 1px solid var(--line); border-radius: 999px; }
+.seg .btn { border: 0; background: transparent; color: var(--muted); padding: 7px 14px; }
+.seg .btn.active { background: linear-gradient(180deg, var(--gold-hi), var(--gold)); color: #17130b; }
 .toggle, .tempo { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 6px; }
 input[type=range] { accent-color: var(--gold); width: 110px; }
 input[type=checkbox] { accent-color: var(--gold); }
@@ -49,6 +53,19 @@ main { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; display: grid
 .status b { color: var(--text); }
 
 .tip { margin: 0; font-size: 13px; color: var(--muted); }
+.midi-state { display: none; margin: 0 0 8px; font-size: 13px; color: #e0a86a; }
+.midi-state.ok { color: #8fd19e; }
+
+/* MIDI mode: the screen is mostly falling notes, the key strip is only a guide */
+body.midi-mode { --black-w: 16px; }
+body.midi-mode .midi-state { display: block; }
+body.midi-mode .tip { display: none; }
+body.midi-mode #fall { height: 440px; }
+body.midi-mode .piano { height: 96px; }
+body.midi-mode .white { flex-basis: 22px; }
+body.midi-mode .key .lbl { font-size: 10px; margin-bottom: 2px; }
+body.midi-mode .key .nm { font-size: 9px; margin-bottom: 6px; }
+body.midi-mode .black .nm { display: none; }
 select.btn { appearance: none; padding-right: 30px; background: #1b1b21 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%23c9a96e'/%3E%3C/svg%3E") no-repeat right 12px center; }
 
 /* Piano */
@@ -70,7 +87,7 @@ select.btn { appearance: none; padding-right: 30px; background: #1b1b21 url("dat
   border-radius: 0 0 7px 7px; box-shadow: inset 0 -6px 0 #d6d1c4, 0 2px 3px #0008; color: #555;
 }
 .black {
-  position: absolute; top: 0; width: 30px; height: 62%; z-index: 2; color: #bbb;
+  position: absolute; top: 0; width: var(--black-w); height: 62%; z-index: 2; color: #bbb;
   background: linear-gradient(180deg, #2b2b30 0%, #0a0a0b 85%, #1d1d21 100%);
   border-radius: 0 0 5px 5px; box-shadow: inset 0 -5px 0 #000, inset 1px 0 0 #ffffff18, 0 4px 6px #000a;
 }
@@ -94,5 +111,6 @@ kbd { display: inline-block; min-width: 24px; text-align: center; padding: 1px 6
   .top { padding: 14px 16px; flex-wrap: wrap; }
   main { padding: 20px 16px 40px; }
   .piano { height: 200px; }
-  #fall { height: 260px; }
+  #fall, body.midi-mode #fall { height: 260px; }
+  nav { flex-wrap: wrap; }
 }

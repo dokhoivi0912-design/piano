@@ -12,6 +12,10 @@
 <header class="top">
   <div class="brand"><span class="logo">𝄞</span><div><h1>Grand Piano</h1><p>Đàn piano bằng bàn phím máy tính</p></div></div>
   <nav>
+    <div class="seg" role="group" aria-label="Chọn cách chơi">
+      <button class="btn" data-input="keys">⌨️ Bàn phím máy tính</button>
+      <button class="btn" data-input="midi">🎹 Đàn MIDI</button>
+    </div>
     <label class="toggle"><input type="checkbox" id="showNotes" checked> Tên nốt</label>
     <button class="btn ghost" id="guideBtn">Hướng dẫn</button>
   </nav>
@@ -28,8 +32,6 @@
       <div class="controls">
         <select class="btn" id="part" aria-label="Chọn đoạn">
           <option value="">Cả bài</option>
-          <option value="Verse">Verse</option>
-          <option value="Điệp khúc">Điệp khúc</option>
         </select>
         <button class="btn gold" id="practiceBtn">Bắt đầu luyện</button>
         <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
@@ -38,6 +40,7 @@
     </div>
     <div class="progress"><div id="bar"></div></div>
     <p class="status" id="status">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
+    <p class="midi-state" id="midiState"></p>
     <p class="tip">Mẹo: <kbd>Space</kbd> nghe lại nốt cần đánh · nốt dài = giữ phím lâu hơn · nốt rơi sẽ chờ đến khi bạn bấm đúng.</p>
   </section>
 
@@ -55,14 +58,18 @@
   <ol>
     <li><b>Phím trắng</b> là các nốt tự nhiên: Đô (C) – Rê (D) – Mi (E) – Fa (F) – Sol (G) – La (A) – Si (B).</li>
     <li><b>Phím đen</b> là nốt thăng (#), nằm giữa hai phím trắng.</li>
-    <li><b>Phím trắng</b> nằm trên hàng giữa:<br>
+    <li><b>Có 2 cách chơi</b> (nút ở góc trên): <i>Bàn phím máy tính</i> hoặc <i>Đàn MIDI</i> cắm ngoài.</li>
+    <li><b>Bàn phím máy tính — phím trắng</b> nằm trên hàng giữa:<br>
       <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd><kbd>'</kbd><br>
-      = La · Si · <b>Đô</b> · Rê · Mi · Fa · Sol · La · Si · Đô · Rê</li>
-    <li><b>Phím đen</b> nằm ở hàng trên: <kbd>W</kbd><kbd>R</kbd><kbd>T</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>[</kbd>. Bài luyện chỉ dùng phím trắng.</li>
+      = Sol · La · Si · <b>Đô</b> · Rê · Mi · Fa · Sol · La · Si · Đô</li>
+    <li><b>Phím đen</b> nằm ở hàng trên: <kbd>W</kbd><kbd>E</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>I</kbd><kbd>O</kbd><kbd>P</kbd>. Bài có vài nốt thăng (#) dùng hàng này.</li>
+    <li><b>Đàn MIDI:</b> cắm đàn qua USB → mở web bằng <b>Chrome/Edge</b> → bấm <i>🎹 Đàn MIDI</i> → bấm <i>Cho phép</i> khi trình duyệt hỏi.
+      Màn hình chỉ hiện nốt rơi kèm tên nốt (Đô, Rê, Mi…); dải phím nhỏ phía dưới giống đàn của bạn, phím <b>C</b> có ghi số quãng tám để dễ dóng.
+      Bấm đúng tên nốt ở <b>quãng tám nào cũng được</b>.</li>
     <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
     <li><b>Luyện bài:</b>
-      ① chọn đoạn (Cả bài / Verse / Điệp khúc) ·
+      ① chọn đoạn (Cả bài hoặc Đoạn 1–13, mỗi đoạn ~20 giây của video) ·
       ② bấm <i>Nghe mẫu</i> để quen giai điệu ·
       ③ bấm <i>Bắt đầu luyện</i>: nốt vàng rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
       Chữ trên nốt rơi là phím máy tính cần bấm. Nốt càng dài thì giữ càng lâu. Bấm sai thì phím nháy đỏ.</li>

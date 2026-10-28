@@ -1,10 +1,19 @@
-/* global KEYMAP, SONG, noteToFreq, songNotes, solfege */
+/* global KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass, songNotes, solfege */
 const $ = (id) => document.getElementById(id);
 const CODE_OF = Object.fromEntries(Object.entries(KEYMAP).map(([code, n]) => [n, code]));
-const PUNCT = { Semicolon: ';', Quote: "'", BracketLeft: '[' };
+const PUNCT = { Semicolon: ';', Quote: "'" };
 const label = (code) => PUNCT[code] || code.replace(/^Key/, '');
 const keyOf = (n) => label(CODE_OF[n]);
-const keyEls = {};
+let keyEls = {};
+
+// 'keys' = computer keyboard (song folded into G4..C6), 'midi' = external MIDI keyboard (real pitch, any octave accepted)
+let input = 'keys';
+try { if (localStorage.getItem('input') === 'midi') input = 'midi'; } catch {}
+const lane = (n) => (input === 'midi' ? n : fitToKeys(n));
+const hintOf = (n) => (input === 'midi'
+  ? `<b>${solfege(n)}</b> (${n})`
+  : `<b>${keyOf(lane(n))}</b> (${solfege(n)})`);
+const isRight = (played, want) => (input === 'midi' ? samePitchClass(played, want) : played === lane(want));
 
 // ---------- Audio: simple additive "piano-ish" synth ----------
 let ctx, master;
@@ -52,17 +61,29 @@ function noteOff(n, rel = 0.35) {
 }
 
 // ---------- Keyboard UI ----------
+// Keys to draw: the computer keymap, or (MIDI) the song's real range widened to whole octaves.
+function pianoKeys() {
+  if (input === 'keys') return Object.entries(KEYMAP).map(([code, n]) => [label(code), n]);
+  const midi = songNotes().map((x) => noteToMidi(x.n));
+  const lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
+  return Array.from({ length: hi - lo + 1 }, (_, i) => midiToNote(lo + i)).map((n) => [n.startsWith('C') && !n.includes('#') ? n : '', n]);
+}
+
 function buildPiano() {
   const piano = $('piano');
-  const whites = Object.values(KEYMAP).filter((n) => !n.includes('#')).length;
+  piano.innerHTML = '';
+  keyEls = {};
+  const keys = pianoKeys();
+  const whites = keys.filter(([, n]) => !n.includes('#')).length;
+  document.body.classList.toggle('midi-mode', input === 'midi');
   let whiteIndex = 0;
-  Object.entries(KEYMAP).forEach(([code, n]) => {
+  keys.forEach(([lbl, n]) => {
     const black = n.includes('#');
     const el = document.createElement('div');
     el.className = `key ${black ? 'black' : 'white'}`;
     el.title = n;
-    el.innerHTML = `<span class="lbl">${label(code)}</span><span class="nm">${solfege(n)}</span>`;
-    if (black) el.style.left = `calc(${(whiteIndex / whites) * 100}% - 15px)`;
+    el.innerHTML = `<span class="lbl">${lbl}</span><span class="nm">${solfege(n)}</span>`;
+    if (black) el.style.left = `calc(${(whiteIndex / whites) * 100}% - var(--black-w) / 2)`;
     else whiteIndex++;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); press(n); });
     el.addEventListener('pointerup', () => release(n));
@@ -74,8 +95,47 @@ function buildPiano() {
 
 function press(n) {
   noteOn(n);
-  keyEls[n].classList.add('on');
+  keyEls[n]?.classList.add('on');
   if (mode === 'practice') checkPractice(n);
+}
+
+// ---------- External MIDI keyboard (Web MIDI: Chrome / Edge) ----------
+let midiAccess = null;
+function midiDevices() {
+  const names = midiAccess ? [...midiAccess.inputs.values()].map((i) => i.name) : [];
+  $('midiState').textContent = names.length ? `🎹 Đã kết nối: ${names.join(', ')}` : '⚠️ Chưa thấy đàn MIDI — cắm đàn qua USB (web tự nhận).';
+  $('midiState').classList.toggle('ok', names.length > 0);
+  if (midiAccess) midiAccess.inputs.forEach((i) => { i.onmidimessage = onMidi; });
+}
+function onMidi({ data: [status, note, vel] }) {
+  const cmd = status & 0xf0;
+  if (cmd === 0x90 && vel > 0) press(midiToNote(note));
+  else if (cmd === 0x80 || cmd === 0x90) release(midiToNote(note));
+}
+async function connectMidi() {
+  if (!navigator.requestMIDIAccess) {
+    $('midiState').textContent = '⚠️ Trình duyệt này không hỗ trợ đàn MIDI — hãy mở web bằng Chrome hoặc Edge.';
+    return;
+  }
+  try {
+    midiAccess ??= await navigator.requestMIDIAccess();
+    midiAccess.onstatechange = midiDevices;
+    midiDevices();
+  } catch {
+    $('midiState').textContent = '⚠️ Chưa được cấp quyền MIDI — bấm "Cho phép" khi trình duyệt hỏi, rồi chọn lại chế độ Đàn MIDI.';
+  }
+}
+
+function setInput(v) {
+  input = v;
+  try { localStorage.setItem('input', v); } catch {}
+  document.querySelectorAll('[data-input]').forEach((b) => b.classList.toggle('active', b.dataset.input === v));
+  reset('idle');
+  buildPiano();
+  if (v === 'midi') connectMidi();
+  setStatus(v === 'midi'
+    ? 'Chế độ <b>Đàn MIDI</b>: đánh trên đàn của bạn theo tên nốt rơi xuống (quãng tám nào cũng được).'
+    : 'Chế độ <b>Bàn phím máy tính</b>: chữ trên nốt rơi là phím cần bấm.');
 }
 function release(n) {
   noteOff(n);
@@ -109,7 +169,7 @@ const leadIn = () => $('fall').clientHeight / BEAT_PX;
 const setStatus = (html) => { $('status').innerHTML = html; };
 
 function reset(newMode) {
-  if (demoOn) release(demoOn);
+  if (demoOn) release(demoOn.n);
   demoOn = null; mode = newMode; idx = 0; wrong = 0; t0 = 0;
   pos = newMode === 'idle' ? 0 : -leadIn();
   $('demoBtn').textContent = newMode === 'demo' ? '■ Dừng' : '▶ Nghe mẫu';
@@ -119,23 +179,23 @@ function reset(newMode) {
 
 function updateTarget() {
   Object.values(keyEls).forEach((el) => el.classList.remove('target'));
-  if (mode === 'practice' && notes[idx]) keyEls[notes[idx].n].classList.add('target');
+  if (mode === 'practice' && notes[idx]) keyEls[lane(notes[idx].n)].classList.add('target');
   $('bar').style.width = `${(idx / notes.length) * 100}%`;
 }
 
 function startPractice() {
   reset('practice');
-  setStatus(`Nốt đầu tiên đang rơi xuống — bấm <b>${keyOf(notes[0].n)}</b> (${solfege(notes[0].n)}) khi bạn sẵn sàng.`);
+  setStatus(`Nốt đầu tiên đang rơi xuống — bấm ${hintOf(notes[0].n)} khi bạn sẵn sàng.`);
 }
 
 function checkPractice(n) {
   const want = notes[idx];
-  if (n !== want.n) {
+  if (!isRight(n, want.n)) {
     wrong++;
     const el = keyEls[n];
-    el.classList.add('wrong');
-    setTimeout(() => el.classList.remove('wrong'), 250);
-    setStatus(`Chưa đúng — cần bấm <b>${keyOf(want.n)}</b> (${solfege(want.n)}). Bấm <kbd>Space</kbd> để nghe gợi ý.`);
+    el?.classList.add('wrong');
+    setTimeout(() => el?.classList.remove('wrong'), 250);
+    setStatus(`Chưa đúng — cần bấm ${hintOf(want.n)}. Bấm <kbd>Space</kbd> để nghe gợi ý.`);
     return;
   }
   if (idx === 0) t0 = performance.now();
@@ -143,7 +203,7 @@ function checkPractice(n) {
   updateTarget();
   if (idx === notes.length) return finish();
   const next = notes[idx];
-  setStatus(`${next.section ? `<b>${next.section}</b> · ` : ''}Tiếp theo: <b>${keyOf(next.n)}</b> (${solfege(next.n)}) — nốt ${idx + 1}/${notes.length}`);
+  setStatus(`${next.section ? `<b>${next.section}</b> · ` : ''}Tiếp theo: ${hintOf(next.n)} — nốt ${idx + 1}/${notes.length}`);
 }
 
 function finish() {
@@ -156,7 +216,7 @@ function finish() {
 
 function hint() {
   if (mode !== 'practice' || !notes[idx]) return;
-  const n = notes[idx].n;
+  const n = lane(notes[idx].n);
   noteOn(n);
   setTimeout(() => noteOff(n), 500);
 }
@@ -182,9 +242,9 @@ function tick(dt) {
     if (demoOn && pos >= demoOn.end) { release(demoOn.n); demoOn = null; }
     while (notes[idx] && notes[idx].start <= pos) {
       if (demoOn) release(demoOn.n);
-      const x = notes[idx++];
-      noteOn(x.n); keyEls[x.n].classList.add('on');
-      demoOn = { n: x.n, end: x.start + x.b * 0.92 };
+      const x = notes[idx++], n = lane(x.n);
+      noteOn(n); keyEls[n].classList.add('on');
+      demoOn = { n, end: x.start + x.b * 0.92 };
       $('bar').style.width = `${(idx / notes.length) * 100}%`;
     }
     if (!notes[idx] && !demoOn) reset('idle'), setStatus('Hết bài mẫu. Giờ bấm <b>Bắt đầu luyện</b> để tự đánh nhé!');
@@ -204,9 +264,9 @@ function draw() {
 
   g.textAlign = 'center';
   notes.forEach((x, i) => {
-    const bottom = H - (x.start - pos) * BEAT_PX, h = x.b * BEAT_PX - 4;
+    const bottom = H - (x.start - pos) * BEAT_PX, h = Math.max(x.b * BEAT_PX - 4, 10); // grace notes stay visible
     if (bottom < 0 || bottom - h > H) return;
-    const el = keyEls[x.n], kx = el.offsetLeft + 3, kw = el.offsetWidth - 6;
+    const el = keyEls[lane(x.n)], kx = el.offsetLeft + 3, kw = el.offsetWidth - 6;
     if (x.section) {
       g.fillStyle = '#c9a96e55'; g.fillRect(0, bottom, W, 1);
       g.fillStyle = '#c9a96e'; g.textAlign = 'right'; g.font = '600 11px Inter, sans-serif';
@@ -221,9 +281,10 @@ function draw() {
     if (isNext) { g.shadowColor = '#e8cf98'; g.shadowBlur = 20; }
     g.beginPath(); g.roundRect(kx, bottom - h, kw, h, 6); g.fill();
     g.shadowBlur = 0;
-    if (h > 18) {
-      g.fillStyle = '#2a200c'; g.font = '700 15px Inter, sans-serif';
-      g.fillText(keyOf(x.n), kx + kw / 2, bottom - 8);
+    if (h > 18 || isNext) {
+      const inside = h > 18; // too short to hold text: write it above the block
+      g.fillStyle = inside ? '#2a200c' : '#e8cf98'; g.font = `700 ${input === 'midi' ? 12 : 15}px Inter, sans-serif`;
+      g.fillText(input === 'midi' ? solfege(x.n) : keyOf(lane(x.n)), kx + kw / 2, inside ? bottom - 8 : bottom - h - 6);
     }
     g.globalAlpha = 1;
   });
@@ -246,9 +307,11 @@ function frame(now) {
 }
 
 // ---------- Init ----------
-buildPiano();
+SONG.sections.forEach((s) => $('part').add(new Option(s.name, s.name)));
+document.querySelectorAll('[data-input]').forEach((b) => { b.onclick = () => { b.blur(); setInput(b.dataset.input); }; });
+setInput(input);
 $('songTitle').textContent = SONG.title;
-const info = () => { $('songArtist').textContent = `${SONG.artist} · ${notes.length} nốt · bản giai điệu đơn giản`; };
+const info = () => { $('songArtist').textContent = `${SONG.artist} · ${notes.length} nốt · giai điệu theo video piano (Đô trưởng)`; };
 info();
 $('tempo').value = SONG.bpm;
 $('tempoOut').textContent = SONG.bpm;
@@ -265,4 +328,4 @@ $('guideBtn').onclick = () => $('guide').showModal();
 $('showNotes').onchange = (e) => document.body.classList.toggle('hide-notes', !e.target.checked);
 updateTarget();
 requestAnimationFrame(frame);
-try { if (!localStorage.getItem('seenGuide2')) { $('guide').showModal(); localStorage.setItem('seenGuide2', '1'); } } catch {}
+try { if (!localStorage.getItem('seenGuide3')) { $('guide').showModal(); localStorage.setItem('seenGuide3', '1'); } } catch {}
