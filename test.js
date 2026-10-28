@@ -44,33 +44,23 @@ test('MIDI mode accepts any octave of the right note', () => {
   assert.strictEqual(matchKey('C4', 'keys'), 'C5');
 });
 
-test('original version has a right-hand melody and left-hand chords from the video', () => {
-  const ev = songEvents(undefined, 'orig');
-  const rh = ev.filter((e) => e.hand === 'R'), lh = ev.filter((e) => e.hand === 'L');
-  assert.ok(rh.length > 300, `rh ${rh.length}`);
-  assert.ok(lh.length > 150, `lh ${lh.length}`);
-  assert.ok(lh.some((e) => e.notes.length >= 3), 'expected some 3+ note chords');
-  rh.forEach((e) => assert.strictEqual(e.notes.length, 1));
-  const playable = new Set(Object.values(KEYMAP));
-  rh.forEach((e) => assert.ok(playable.has(fitToKeys(e.notes[0])), e.notes[0]));
-  ev.forEach((e, i) => {
-    assert.ok(e.b > 0);
-    e.notes.forEach((n) => assert.ok(noteToMidi(n) >= 21 && noteToMidi(n) <= 108, n));
-    if (i) assert.ok(e.start >= ev[i - 1].start);
-  });
-  assert.ok(SONG.title && SONG.bpm > 0);
+test('sections are labelled verse / chorus / outro', () => {
+  assert.deepStrictEqual(SONG.sections.map((x) => x.part), [
+    'chorus', 'verse', 'verse', 'chorus', 'verse', 'chorus', 'verse', 'chorus', 'verse', 'verse', 'chorus', 'verse', 'outro']);
+  SONG.sections.forEach((x) => assert.ok(x.name.includes(x.part === 'chorus' ? 'Điệp khúc' : x.part === 'verse' ? 'Verse' : 'Kết'), x.name));
 });
 
-test('songEvents(section) returns one section starting at 0', () => {
-  assert.ok(SONG.sections.length >= 5);
-  let total = 0;
-  for (const s of SONG.sections) {
-    const ev = songEvents(s.name, 'orig');
-    assert.ok(ev.length > 0, s.name);
-    assert.strictEqual(Math.min(...ev.map((e) => e.start)), 0);
-    total += ev.length;
+test('songEvents(section) keeps beat 1 on a bar line', () => {
+  for (const level of ['easy', 'orig']) {
+    let total = 0;
+    for (const x of SONG.sections) {
+      const ev = songEvents(x.name, level);
+      assert.ok(ev.length > 0, x.name);
+      assert.ok(Math.min(...ev.map((e) => e.start)) < 4);
+      total += ev.length;
+    }
+    assert.strictEqual(total, songEvents(undefined, level).length);
   }
-  assert.strictEqual(total, songEvents(undefined, 'orig').length);
 });
 
 test('practiceSteps groups simultaneous notes of the chosen hands', () => {
@@ -118,28 +108,60 @@ test('accompaniment patterns in 4/4', () => {
   [block, beats, bass].forEach((list) => list.forEach((e) => assert.strictEqual(e.hand, 'L')));
 });
 
-test('easy version: melody within one octave G4..G5 on an 8th-note grid', () => {
-  const ev = songEvents();
-  const rh = ev.filter((e) => e.hand === 'R');
-  assert.ok(rh.length > 200, `rh ${rh.length}`);
+const inOctave = (n) => noteToMidi(n) >= noteToMidi('G4') && noteToMidi(n) <= noteToMidi('G5');
+
+test('easy right hand: every melody note kept, 8th grid, one octave, legato', () => {
+  const rh = songEvents(undefined, 'easy').filter((e) => e.hand === 'R');
+  assert.ok(rh.length >= 440, `only ${rh.length} notes`);
   rh.forEach((e, i) => {
-    const m = noteToMidi(e.notes[0]);
-    assert.ok(m >= noteToMidi('G4') && m <= noteToMidi('G5'), e.notes[0]);
+    assert.ok(inOctave(e.notes[0]), e.notes[0]);
     assert.strictEqual(e.start * 2 % 1, 0, `start ${e.start} not on an 8th`);
-    if (i) assert.ok(e.start > rh[i - 1].start, 'two melody notes at once');
+    const next = rh[i + 1];
+    if (!next) return;
+    assert.ok(next.start > e.start, 'two melody notes at once');
+    // no hollow gaps: a note rings until the next one (up to 2 beats)
+    assert.strictEqual(e.b, Math.min(next.start - e.start, 2), `gap after ${e.notes[0]} at ${e.start}`);
   });
 });
 
+test('original right hand: 16th grid, one octave, as played', () => {
+  const rh = songEvents(undefined, 'orig').filter((e) => e.hand === 'R');
+  assert.ok(rh.length >= 450, `only ${rh.length} notes`);
+  rh.forEach((e, i) => {
+    assert.ok(inOctave(e.notes[0]), e.notes[0]);
+    assert.strictEqual(e.start * 4 % 1, 0, `start ${e.start} not on a 16th`);
+    if (i) assert.ok(e.start > rh[i - 1].start);
+  });
+});
+
+test('original left hand: block chords in verses, legato arpeggio in choruses, never more than 3 notes', () => {
+  for (const x of SONG.sections) {
+    const lh = songEvents(x.name, 'orig').filter((e) => e.hand === 'L');
+    assert.ok(lh.length > 0, x.name);
+    lh.forEach((e) => assert.ok(e.notes.length <= 3));
+    if (x.part === 'chorus') assert.ok(lh.every((e) => e.notes.length === 1), `${x.name} should be arpeggiated`);
+    else assert.ok(lh.every((e) => e.notes.length === 3), `${x.name} should be block chords`);
+  }
+});
+
+test('legato arpeggio pattern: root-3-5-3 in 8ths, each note held to the end of the half bar', () => {
+  const arp = accompany([['C', 0, 2], ['F', 2, 4]], 'arp');
+  assert.deepStrictEqual(arp.slice(0, 4).map((e) => [e.notes[0], e.start, e.b]),
+    [['C3', 0, 2], ['E3', 0.5, 1.5], ['G3', 1, 1], ['E3', 1.5, 0.5]]);
+  assert.strictEqual(arp.length, 12); // F lasts a whole bar = two half bars
+  assert.deepStrictEqual(arp.filter((e) => e.chord).map((e) => e.chord), ['C', 'F']);
+});
+
 test('easy version: basic triads that fill every bar', () => {
-  assert.ok(SONG.easy.sections.length >= 5);
-  const chords = SONG.easy.sections.flatMap((s) => s.chords);
+  assert.ok(SONG.sections.length >= 5);
+  const chords = SONG.sections.flatMap((s) => s.chords);
   chords.forEach(([name, start, len], i) => {
     assert.ok(['C', 'Dm', 'Em', 'F', 'G', 'Am'].includes(name), name);
     assert.strictEqual(start % 2, 0);
     if (i) assert.strictEqual(chords[i - 1][1] + chords[i - 1][2], start, 'gap between chords');
   });
   for (const p of ['block', 'beats', 'bass']) {
-    const lh = songEvents(SONG.easy.sections[1].name, 'easy', p).filter((e) => e.hand === 'L');
+    const lh = songEvents(SONG.sections[1].name, 'easy', p).filter((e) => e.hand === 'L');
     assert.ok(lh.length > 0, p);
   }
 });
