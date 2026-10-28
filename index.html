@@ -30,6 +30,11 @@
         <p class="muted" id="songArtist"></p>
       </div>
       <div class="controls">
+        <div class="seg" id="handSeg" role="group" aria-label="Chọn tay luyện">
+          <button class="btn" data-hand="R">Tay phải</button>
+          <button class="btn" data-hand="L">Tay trái</button>
+          <button class="btn" data-hand="RL">Hai tay</button>
+        </div>
         <select class="btn" id="part" aria-label="Chọn đoạn">
           <option value="">Cả bài</option>
         </select>
@@ -41,6 +46,7 @@
     <div class="progress"><div id="bar"></div></div>
     <p class="status" id="status">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
     <p class="midi-state" id="midiState"></p>
+    <p class="legend"><span class="dot r"></span>Tay phải (giai điệu) <span class="dot l"></span>Tay trái (hợp âm) <span class="dot ok"></span>Nốt đã bấm đúng</p>
     <p class="tip">Mẹo: <kbd>Space</kbd> nghe lại nốt cần đánh · nốt dài = giữ phím lâu hơn · nốt rơi sẽ chờ đến khi bạn bấm đúng.</p>
   </section>
 
@@ -66,6 +72,11 @@
     <li><b>Đàn MIDI:</b> cắm đàn qua USB → mở web bằng <b>Chrome/Edge</b> → bấm <i>🎹 Đàn MIDI</i> → bấm <i>Cho phép</i> khi trình duyệt hỏi.
       Màn hình chỉ hiện nốt rơi kèm tên nốt (Đô, Rê, Mi…); dải phím nhỏ phía dưới giống đàn của bạn, phím <b>C</b> có ghi số quãng tám để dễ dóng.
       Bấm đúng tên nốt ở <b>quãng tám nào cũng được</b>.</li>
+    <li><b>Hai tay (đàn MIDI):</b> chọn <i>Tay phải</i>, <i>Tay trái</i> hoặc <i>Hai tay</i>. Khi luyện một tay, web tự đệm tay còn lại.
+      Nốt <b style="color:#e8cf98">vàng</b> là tay phải (giai điệu), nốt <b style="color:#9cc4ea">xanh</b> là tay trái (hợp âm).
+      Với hợp âm, bấm <b>đủ các nốt</b> theo thứ tự nào cũng được — nốt đúng chuyển <b style="color:#8fd19e">xanh lá</b>, đủ thì sang bước tiếp.
+      Mẹo: luyện từng tay cho thuộc rồi mới chọn Hai tay.</li>
+    <li><b>Bàn phím máy tính</b> chỉ đánh tay phải; hợp âm tay trái web tự đệm cho bạn nghe.</li>
     <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
     <li><b>Luyện bài:</b>

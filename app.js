@@ -1,4 +1,4 @@
-/* global KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass, songNotes, solfege */
+/* global KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, songEvents, practiceSteps, matchKey, solfege */
 const $ = (id) => document.getElementById(id);
 const CODE_OF = Object.fromEntries(Object.entries(KEYMAP).map(([code, n]) => [n, code]));
 const PUNCT = { Semicolon: ';', Quote: "'" };
@@ -6,14 +6,18 @@ const label = (code) => PUNCT[code] || code.replace(/^Key/, '');
 const keyOf = (n) => label(CODE_OF[n]);
 let keyEls = {};
 
-// 'keys' = computer keyboard (song folded into G4..C6), 'midi' = external MIDI keyboard (real pitch, any octave accepted)
-let input = 'keys';
-try { if (localStorage.getItem('input') === 'midi') input = 'midi'; } catch {}
-const lane = (n) => (input === 'midi' ? n : fitToKeys(n));
-const hintOf = (n) => (input === 'midi'
-  ? `<b>${solfege(n)}</b> (${n})`
-  : `<b>${keyOf(lane(n))}</b> (${solfege(n)})`);
-const isRight = (played, want) => (input === 'midi' ? samePitchClass(played, want) : played === lane(want));
+// 'keys' = computer keyboard (right hand only, folded into G4..C6), 'midi' = external MIDI keyboard (real pitch, any octave)
+let input = 'keys', hand = 'R'; // hand practised on MIDI: 'R' | 'L' | 'RL'
+try {
+  if (localStorage.getItem('input') === 'midi') input = 'midi';
+  if (['R', 'L', 'RL'].includes(localStorage.getItem('hand'))) hand = localStorage.getItem('hand');
+} catch {}
+const practisedHands = () => (input === 'midi' ? [...hand] : ['R']);
+const HAND_NAME = { R: 'Tay phải', L: 'Tay trái' };
+// Which on-screen key shows a note. The computer keyboard only has right-hand keys, so the left hand is heard, not drawn.
+const laneOf = (e, n) => (input === 'midi' ? n : e.hand === 'R' ? fitToKeys(n) : null);
+const pitchOf = (e, n) => (input === 'keys' && e.hand === 'R' ? fitToKeys(n) : n);
+const nameOf = (n) => (input === 'midi' ? solfege(n) : keyOf(fitToKeys(n)));
 
 // ---------- Audio: simple additive "piano-ish" synth ----------
 let ctx, master;
@@ -29,13 +33,13 @@ function audio() {
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
-function noteOn(n) {
+function noteOn(n, vol = 1) {
   const c = audio(), t = c.currentTime, f = noteToFreq(n);
   noteOff(n, 0.02);
   const g = c.createGain();
   g.gain.setValueAtTime(0, t);
-  g.gain.linearRampToValueAtTime(1, t + 0.005);
-  g.gain.exponentialRampToValueAtTime(0.25, t + 0.4);
+  g.gain.linearRampToValueAtTime(vol, t + 0.005);
+  g.gain.exponentialRampToValueAtTime(0.25 * vol, t + 0.4);
   g.gain.exponentialRampToValueAtTime(0.001, t + 3.5);
   const lp = c.createBiquadFilter();
   lp.type = 'lowpass';
@@ -61,10 +65,10 @@ function noteOff(n, rel = 0.35) {
 }
 
 // ---------- Keyboard UI ----------
-// Keys to draw: the computer keymap, or (MIDI) the song's real range widened to whole octaves.
+// Keys to draw: the computer keymap, or (MIDI) both hands' real range widened to whole octaves.
 function pianoKeys() {
   if (input === 'keys') return Object.entries(KEYMAP).map(([code, n]) => [label(code), n]);
-  const midi = songNotes().map((x) => noteToMidi(x.n));
+  const midi = songEvents().flatMap((e) => e.notes.map(noteToMidi));
   const lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
   return Array.from({ length: hi - lo + 1 }, (_, i) => midiToNote(lo + i)).map((n) => [n.startsWith('C') && !n.includes('#') ? n : '', n]);
 }
@@ -98,6 +102,26 @@ function press(n) {
   keyEls[n]?.classList.add('on');
   if (mode === 'practice') checkPractice(n);
 }
+function release(n) {
+  noteOff(n);
+  keyEls[n]?.classList.remove('on');
+}
+
+const held = new Set();
+addEventListener('keydown', (e) => {
+  if (e.metaKey || e.ctrlKey || e.altKey || $('guide').open) return;
+  if (e.code === 'Space') { e.preventDefault(); return hint(); }
+  const n = KEYMAP[e.code];
+  if (!n || e.repeat) return;
+  e.preventDefault();
+  held.add(e.code);
+  press(n);
+});
+addEventListener('keyup', (e) => {
+  if (!held.delete(e.code)) return;
+  release(KEYMAP[e.code]);
+});
+addEventListener('blur', () => { held.forEach((c) => release(KEYMAP[c])); held.clear(); });
 
 // ---------- External MIDI keyboard (Web MIDI: Chrome / Edge) ----------
 let midiAccess = null;
@@ -130,127 +154,157 @@ function setInput(v) {
   input = v;
   try { localStorage.setItem('input', v); } catch {}
   document.querySelectorAll('[data-input]').forEach((b) => b.classList.toggle('active', b.dataset.input === v));
-  reset('idle');
   buildPiano();
+  reset('idle');
   if (v === 'midi') connectMidi();
   setStatus(v === 'midi'
-    ? 'Chế độ <b>Đàn MIDI</b>: đánh trên đàn của bạn theo tên nốt rơi xuống (quãng tám nào cũng được).'
-    : 'Chế độ <b>Bàn phím máy tính</b>: chữ trên nốt rơi là phím cần bấm.');
+    ? 'Chế độ <b>Đàn MIDI</b>: chọn tay muốn luyện, đánh theo tên nốt rơi xuống (quãng tám nào cũng được).'
+    : 'Chế độ <b>Bàn phím máy tính</b>: bạn đánh tay phải (chữ trên nốt rơi), web tự đệm hợp âm tay trái.');
 }
-function release(n) {
-  noteOff(n);
-  keyEls[n]?.classList.remove('on');
+function setHand(v) {
+  hand = v;
+  try { localStorage.setItem('hand', v); } catch {}
+  document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === v));
+  reset('idle');
+  setStatus(`Luyện <b>${v === 'RL' ? 'hai tay' : HAND_NAME[v].toLowerCase()}</b>${v === 'RL' ? '' : ' — web tự đệm tay còn lại'}.`);
 }
-
-const held = new Set();
-addEventListener('keydown', (e) => {
-  if (e.metaKey || e.ctrlKey || e.altKey || $('guide').open) return;
-  if (e.code === 'Space') { e.preventDefault(); return hint(); }
-  const n = KEYMAP[e.code];
-  if (!n || e.repeat) return;
-  e.preventDefault();
-  held.add(e.code);
-  press(n);
-});
-addEventListener('keyup', (e) => {
-  if (!held.delete(e.code)) return;
-  release(KEYMAP[e.code]);
-});
-addEventListener('blur', () => { held.forEach((c) => release(KEYMAP[c])); held.clear(); });
 
 // ---------- Song state ----------
 const BEAT_PX = 80; // falling speed: pixels per beat
-let notes = songNotes();
+let events = songEvents();
+let steps = [];    // what the player must hit, in order (a melody note, a chord, or both hands together)
+let auto = [];     // events the web plays by itself (the other hand, or everything in a demo)
 let mode = 'idle'; // 'idle' | 'practice' | 'demo'
-let idx = 0;       // next note to hit (practice) or to play (demo)
-let pos = 0;       // song position in beats; a note touches the keys when pos === note.start
-let wrong = 0, t0 = 0, demoOn = null;
+let idx = 0, autoIdx = 0;
+let pos = 0;       // song position in beats; an event touches the keys when pos === event.start
+let wrong = 0, t0 = 0;
+let sounding = []; // auto-played notes still ringing: { n, lane, end }
 const leadIn = () => $('fall').clientHeight / BEAT_PX;
 const setStatus = (html) => { $('status').innerHTML = html; };
 
 function reset(newMode) {
-  if (demoOn) release(demoOn.n);
-  demoOn = null; mode = newMode; idx = 0; wrong = 0; t0 = 0;
+  sounding.forEach((s) => release(s.n));
+  sounding = []; mode = newMode; idx = 0; autoIdx = 0; wrong = 0; t0 = 0;
+  const hands = practisedHands();
+  steps = practiceSteps(events, hands);
+  steps.forEach((s) => {
+    s.need = new Set(s.events.flatMap((e) => e.notes.map((n) => matchKey(n, input))));
+    s.hit = new Set();
+  });
+  auto = newMode === 'demo' ? events : events.filter((e) => !hands.includes(e.hand));
   pos = newMode === 'idle' ? 0 : -leadIn();
   $('demoBtn').textContent = newMode === 'demo' ? '■ Dừng' : '▶ Nghe mẫu';
   $('practiceBtn').textContent = newMode === 'practice' ? 'Bắt đầu lại' : 'Bắt đầu luyện';
   updateTarget();
 }
 
+// "Tay phải: H (Mi) · Tay trái: Fa + Đô + La" for the notes of the step still to hit
+function describe(step) {
+  return ['R', 'L'].map((h) => {
+    const ns = step.events.filter((e) => e.hand === h).flatMap((e) => e.notes).filter((n) => !step.hit.has(matchKey(n, input)));
+    if (!ns.length) return '';
+    const txt = [...new Set(ns.map(nameOf))].join(' + ');
+    return `${HAND_NAME[h]}: <b>${txt}</b>${input === 'keys' ? ` (${[...new Set(ns.map(solfege))].join(' + ')})` : ''}`;
+  }).filter(Boolean).join(' · ');
+}
+
 function updateTarget() {
-  Object.values(keyEls).forEach((el) => el.classList.remove('target'));
-  if (mode === 'practice' && notes[idx]) keyEls[lane(notes[idx].n)].classList.add('target');
-  $('bar').style.width = `${(idx / notes.length) * 100}%`;
+  Object.values(keyEls).forEach((el) => el.classList.remove('target', 'hit'));
+  const s = mode === 'practice' && steps[idx];
+  if (s) s.events.forEach((e) => e.notes.forEach((n) => keyEls[laneOf(e, n)]?.classList.add(s.hit.has(matchKey(n, input)) ? 'hit' : 'target')));
+  $('bar').style.width = `${(idx / Math.max(steps.length, 1)) * 100}%`;
 }
 
 function startPractice() {
+  audio();
   reset('practice');
-  setStatus(`Nốt đầu tiên đang rơi xuống — bấm ${hintOf(notes[0].n)} khi bạn sẵn sàng.`);
+  setStatus(`Nốt đầu tiên đang rơi xuống — ${describe(steps[0])}.`);
 }
 
 function checkPractice(n) {
-  const want = notes[idx];
-  if (!isRight(n, want.n)) {
+  const s = steps[idx];
+  if (!s) return;
+  const k = matchKey(n, input);
+  if (s.hit.has(k)) return; // already got this one
+  // the rest of a chord just completed (e.g. the second F of F3+F4) is not a mistake on the next step
+  const prev = steps[idx - 1];
+  if (!s.need.has(k) && prev?.need.has(k) && performance.now() - prev.doneAt < 500) return;
+  if (!s.need.has(k)) {
     wrong++;
     const el = keyEls[n];
     el?.classList.add('wrong');
     setTimeout(() => el?.classList.remove('wrong'), 250);
-    setStatus(`Chưa đúng — cần bấm ${hintOf(want.n)}. Bấm <kbd>Space</kbd> để nghe gợi ý.`);
+    setStatus(`Chưa đúng — cần bấm ${describe(s)}. Bấm <kbd>Space</kbd> để nghe gợi ý.`);
     return;
   }
-  if (idx === 0) t0 = performance.now();
+  s.hit.add(k);
+  if (idx === 0 && s.hit.size === 1) t0 = performance.now();
+  if (s.hit.size < s.need.size) {
+    updateTarget();
+    return setStatus(`Đúng rồi, bấm tiếp: ${describe(s)}`);
+  }
+  s.doneAt = performance.now();
   idx++;
   updateTarget();
-  if (idx === notes.length) return finish();
-  const next = notes[idx];
-  setStatus(`${next.section ? `<b>${next.section}</b> · ` : ''}Tiếp theo: ${hintOf(next.n)} — nốt ${idx + 1}/${notes.length}`);
+  if (idx === steps.length) return finish();
+  const next = steps[idx], sec = next.events.find((e) => e.section)?.section;
+  setStatus(`${sec ? `<b>${sec}</b> · ` : ''}Tiếp theo: ${describe(next)} — ${idx + 1}/${steps.length}`);
 }
 
 function finish() {
   mode = 'idle';
+  sounding.forEach((s) => release(s.n)); sounding = [];
   const secs = Math.round((performance.now() - t0) / 1000);
-  const acc = Math.round((notes.length / (notes.length + wrong)) * 100);
+  const total = steps.reduce((a, s) => a + s.need.size, 0);
+  const acc = Math.round((total / (total + wrong)) * 100);
   $('practiceBtn').textContent = 'Luyện lại';
   setStatus(`🎉 <b>Hoàn thành!</b> Sai <b>${wrong}</b> lần · độ chính xác <b>${acc}%</b> · thời gian <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b>`);
 }
 
 function hint() {
-  if (mode !== 'practice' || !notes[idx]) return;
-  const n = lane(notes[idx].n);
-  noteOn(n);
-  setTimeout(() => noteOff(n), 500);
+  const s = mode === 'practice' && steps[idx];
+  if (!s) return;
+  const ns = s.events.flatMap((e) => e.notes.map((n) => pitchOf(e, n)));
+  ns.forEach((n) => noteOn(n, 0.7));
+  setTimeout(() => ns.forEach((n) => noteOff(n)), 600);
 }
 
 function toggleDemo() {
   if (mode === 'demo') return reset('idle'), setStatus('Đã dừng. Bấm <b>Bắt đầu luyện</b> để tự đánh.');
   audio();
   reset('demo');
-  setStatus('Đang phát mẫu — nhìn nốt rơi chạm phím nào thì phím đó kêu.');
+  setStatus('Đang phát mẫu cả hai tay — vàng là tay phải, xanh là tay trái.');
 }
 
 // ---------- Falling notes ----------
 function tick(dt) {
-  const bps = SONG.bpm / 60;
-  if (mode === 'practice' && notes[idx]) {
-    // fall at tempo, wait at the keys until the right key is hit, catch up quickly if the player is ahead
-    const gap = notes[idx].start - pos;
+  if (mode === 'idle') return;
+  const bps = SONG.bpm / 60, s = mode === 'practice' && steps[idx];
+  if (s) {
+    // fall at tempo, wait at the keys until the step is hit, catch up quickly if the player is ahead
+    const gap = s.start - pos;
     pos += Math.min(gap, Math.max(bps, gap * 6) * dt);
-  } else if (mode === 'practice') {
-    pos += bps * dt; // let the last notes fall away after finishing
-  } else if (mode === 'demo') {
-    pos += bps * dt;
-    if (demoOn && pos >= demoOn.end) { release(demoOn.n); demoOn = null; }
-    while (notes[idx] && notes[idx].start <= pos) {
-      if (demoOn) release(demoOn.n);
-      const x = notes[idx++], n = lane(x.n);
-      noteOn(n); keyEls[n].classList.add('on');
-      demoOn = { n, end: x.start + x.b * 0.92 };
-      $('bar').style.width = `${(idx / notes.length) * 100}%`;
-    }
-    if (!notes[idx] && !demoOn) reset('idle'), setStatus('Hết bài mẫu. Giờ bấm <b>Bắt đầu luyện</b> để tự đánh nhé!');
+  } else pos += bps * dt;
+
+  // auto-played notes; in practice, notes that coincide with the waiting step sound together with it, not before
+  sounding = sounding.filter((x) => (pos >= x.end ? (release(x.n), false) : true));
+  const limit = s ? Math.min(pos, s.start - 0.15) : pos;
+  while (auto[autoIdx] && auto[autoIdx].start <= limit) {
+    const e = auto[autoIdx++];
+    e.notes.forEach((n) => {
+      const p = pitchOf(e, n);
+      noteOn(p, e.hand === 'L' ? 0.6 : 1);
+      if (laneOf(e, n)) keyEls[p]?.classList.add('on');
+      sounding.push({ n: p, end: e.start + Math.max(e.b * 0.95, 0.1) });
+    });
+  }
+  if (mode === 'demo') {
+    $('bar').style.width = `${(autoIdx / auto.length) * 100}%`;
+    if (!auto[autoIdx] && !sounding.length) reset('idle'), setStatus('Hết bài mẫu. Giờ bấm <b>Bắt đầu luyện</b> để tự đánh nhé!');
   }
 }
 
+const COLORS = { R: ['#fff1cc', '#e8cf98', '#a8874c'], L: ['#e3f1ff', '#9cc4ea', '#4f7fae'] };
 function draw() {
   const c = $('fall'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
   if (c.width !== W * dpr || c.height !== H * dpr) { c.width = W * dpr; c.height = H * dpr; }
@@ -262,32 +316,41 @@ function draw() {
   g.fillStyle = '#ffffff08';
   Object.values(keyEls).forEach((el, i) => { if (el.classList.contains('white') && i % 2) g.fillRect(el.offsetLeft, 0, el.offsetWidth, H); });
 
+  const hands = practisedHands(), cur = mode === 'practice' ? steps[idx] : null;
   g.textAlign = 'center';
-  notes.forEach((x, i) => {
-    const bottom = H - (x.start - pos) * BEAT_PX, h = Math.max(x.b * BEAT_PX - 4, 10); // grace notes stay visible
-    if (bottom < 0 || bottom - h > H) return;
-    const el = keyEls[lane(x.n)], kx = el.offsetLeft + 3, kw = el.offsetWidth - 6;
-    if (x.section) {
+  for (const e of events) {
+    const bottom = H - (e.start - pos) * BEAT_PX, h = Math.max(e.b * BEAT_PX - 4, 10); // grace notes stay visible
+    if (bottom < 0 || bottom - h > H) continue;
+    if (e.section) {
       g.fillStyle = '#c9a96e55'; g.fillRect(0, bottom, W, 1);
       g.fillStyle = '#c9a96e'; g.textAlign = 'right'; g.font = '600 11px Inter, sans-serif';
-      g.fillText(x.section.toUpperCase(), W - 8, bottom - 6); g.textAlign = 'center';
+      g.fillText(e.section.toUpperCase(), W - 8, bottom - 6); g.textAlign = 'center';
     }
-    const isNext = mode === 'practice' && i === idx, done = i < idx;
-    g.globalAlpha = done ? 0.25 : 1;
-    const grad = g.createLinearGradient(0, bottom - h, 0, bottom);
-    grad.addColorStop(0, isNext ? '#fff1cc' : '#e8cf98');
-    grad.addColorStop(1, isNext ? '#e8cf98' : '#a8874c');
-    g.fillStyle = grad;
-    if (isNext) { g.shadowColor = '#e8cf98'; g.shadowBlur = 20; }
-    g.beginPath(); g.roundRect(kx, bottom - h, kw, h, 6); g.fill();
-    g.shadowBlur = 0;
-    if (h > 18 || isNext) {
-      const inside = h > 18; // too short to hold text: write it above the block
-      g.fillStyle = inside ? '#2a200c' : '#e8cf98'; g.font = `700 ${input === 'midi' ? 12 : 15}px Inter, sans-serif`;
-      g.fillText(input === 'midi' ? solfege(x.n) : keyOf(lane(x.n)), kx + kw / 2, inside ? bottom - 8 : bottom - h - 6);
+    const isNext = cur && cur.events.includes(e);
+    const mine = mode !== 'practice' || hands.includes(e.hand);
+    const done = mode === 'practice' && mine && !isNext && (!cur || e.start < cur.start);
+    for (const n of e.notes) {
+      const el = keyEls[laneOf(e, n)];
+      if (!el) continue;
+      const kx = el.offsetLeft + 2, kw = el.offsetWidth - 4;
+      const hit = isNext && cur.hit.has(matchKey(n, input));
+      const [hi, mid, lo] = hit ? ['#d9ffe3', '#8fd19e', '#4e9a63'] : COLORS[e.hand];
+      g.globalAlpha = done ? 0.25 : mine ? 1 : 0.4;
+      const grad = g.createLinearGradient(0, bottom - h, 0, bottom);
+      grad.addColorStop(0, isNext ? hi : mid);
+      grad.addColorStop(1, isNext ? mid : lo);
+      g.fillStyle = grad;
+      if (isNext && !hit) { g.shadowColor = mid; g.shadowBlur = 20; }
+      g.beginPath(); g.roundRect(kx, bottom - h, kw, h, 5); g.fill();
+      g.shadowBlur = 0;
+      if (mine && (h > 18 || isNext)) {
+        const inside = h > 18; // too short to hold text: write it above the block
+        g.fillStyle = inside ? '#1d1a12' : mid; g.font = `700 ${input === 'midi' ? 11 : 15}px Inter, sans-serif`;
+        g.fillText(nameOf(n), kx + kw / 2, inside ? bottom - 7 : bottom - h - 6);
+      }
+      g.globalAlpha = 1;
     }
-    g.globalAlpha = 1;
-  });
+  }
 
   // glow at the hit line for keys being pressed
   Object.values(keyEls).forEach((el) => {
@@ -309,16 +372,21 @@ function frame(now) {
 // ---------- Init ----------
 SONG.sections.forEach((s) => $('part').add(new Option(s.name, s.name)));
 document.querySelectorAll('[data-input]').forEach((b) => { b.onclick = () => { b.blur(); setInput(b.dataset.input); }; });
+document.querySelectorAll('[data-hand]').forEach((b) => { b.onclick = () => { b.blur(); setHand(b.dataset.hand); }; });
+document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === hand));
 setInput(input);
 $('songTitle').textContent = SONG.title;
-const info = () => { $('songArtist').textContent = `${SONG.artist} · ${notes.length} nốt · giai điệu theo video piano (Đô trưởng)`; };
+const info = () => {
+  const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
+  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} hợp âm/nốt tay trái · theo video piano (Đô trưởng)`;
+};
 info();
 $('tempo').value = SONG.bpm;
 $('tempoOut').textContent = SONG.bpm;
 $('tempo').oninput = (e) => { SONG.bpm = +e.target.value; $('tempoOut').textContent = SONG.bpm; };
 $('tempo').onchange = (e) => e.target.blur();
 $('part').onchange = (e) => {
-  notes = songNotes(e.target.value || undefined);
+  events = songEvents(e.target.value || undefined);
   e.target.blur(); info(); reset('idle');
   setStatus('Đã chọn đoạn. Bấm <b>Nghe mẫu</b> hoặc <b>Bắt đầu luyện</b>.');
 };
@@ -326,6 +394,5 @@ $('practiceBtn').onclick = (e) => { e.currentTarget.blur(); startPractice(); };
 $('demoBtn').onclick = (e) => { e.currentTarget.blur(); toggleDemo(); };
 $('guideBtn').onclick = () => $('guide').showModal();
 $('showNotes').onchange = (e) => document.body.classList.toggle('hide-notes', !e.target.checked);
-updateTarget();
 requestAnimationFrame(frame);
-try { if (!localStorage.getItem('seenGuide3')) { $('guide').showModal(); localStorage.setItem('seenGuide3', '1'); } } catch {}
+try { if (!localStorage.getItem('seenGuide4')) { $('guide').showModal(); localStorage.setItem('seenGuide4', '1'); } } catch {}

@@ -53,6 +53,12 @@ main { max-width: 1200px; margin: 0 auto; padding: 28px 24px 48px; display: grid
 .status b { color: var(--text); }
 
 .tip { margin: 0; font-size: 13px; color: var(--muted); }
+#handSeg, .legend { display: none; }
+body.midi-mode #handSeg { display: flex; }
+body.midi-mode .legend { display: flex; }
+.legend { gap: 6px 14px; align-items: center; flex-wrap: wrap; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.dot { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: -8px; }
+.dot.r { background: #e8cf98; } .dot.l { background: #9cc4ea; } .dot.ok { background: #8fd19e; }
 .midi-state { display: none; margin: 0 0 8px; font-size: 13px; color: #e0a86a; }
 .midi-state.ok { color: #8fd19e; }
 
@@ -100,6 +106,7 @@ body.hide-notes .key .nm { display: none; }
 .black.on { background: linear-gradient(180deg, #1a1a1d, #000); box-shadow: inset 0 -2px 0 #000; }
 .key.target { background: linear-gradient(180deg, #f3dfb0, var(--gold)); color: #2a200c; box-shadow: 0 0 22px #e8cf98aa, inset 0 -6px 0 #a8874c; }
 .black.target { background: linear-gradient(180deg, var(--gold-hi), #9c7d42); }
+.key.hit { background: linear-gradient(180deg, #d9ffe3, #8fd19e) !important; color: #123; }
 .key.wrong { background: var(--wrong) !important; color: #fff; }
 
 dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 18px; max-width: 620px; padding: 26px 30px; }
