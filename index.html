@@ -30,6 +30,15 @@
         <p class="muted" id="songArtist"></p>
       </div>
       <div class="controls">
+        <div class="seg" role="group" aria-label="Chọn bản">
+          <button class="btn" data-level="easy">Dễ</button>
+          <button class="btn" data-level="orig">Gốc</button>
+        </div>
+        <select class="btn" id="pattern" aria-label="Kiểu đệm tay trái">
+          <option value="block">Đệm: Hợp âm khối</option>
+          <option value="beats">Đệm: Đều 4 phách</option>
+          <option value="bass">Đệm: Bass + hợp âm</option>
+        </select>
         <div class="seg" id="handSeg" role="group" aria-label="Chọn tay luyện">
           <button class="btn" data-hand="R">Tay phải</button>
           <button class="btn" data-hand="L">Tay trái</button>
@@ -40,6 +49,7 @@
         </select>
         <button class="btn gold" id="practiceBtn">Bắt đầu luyện</button>
         <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
+        <label class="toggle"><input type="checkbox" id="metro" checked> Gõ nhịp</label>
         <label class="tempo">Tốc độ <input type="range" id="tempo" min="50" max="130" step="1"> <output id="tempoOut"></output></label>
       </div>
     </div>
@@ -77,6 +87,14 @@
       Với hợp âm, bấm <b>đủ các nốt</b> theo thứ tự nào cũng được — nốt đúng chuyển <b style="color:#8fd19e">xanh lá</b>, đủ thì sang bước tiếp.
       Mẹo: luyện từng tay cho thuộc rồi mới chọn Hai tay.</li>
     <li><b>Bàn phím máy tính</b> chỉ đánh tay phải; hợp âm tay trái web tự đệm cho bạn nghe.</li>
+    <li><b>Bản Dễ / Gốc:</b> bản <i>Dễ</i> có giai điệu gọn trong 1 quãng tám (Sol → Sol), nhịp làm tròn đều, tay trái chỉ dùng hợp âm 3 nốt
+      C (Đô-Mi-Sol), Dm (Rê-Fa-La), Em (Mi-Sol-Si), F (Fa-La-Đô), G (Sol-Si-Rê), Am (La-Đô-Mi). Tên hợp âm hiện màu xanh trên nốt rơi.
+      Bản <i>Gốc</i> giống hệt video, dành cho khi bạn đã quen.</li>
+    <li><b>Kiểu đệm (bản Dễ, nhịp 4/4 — đếm 1 2 3 4):</b>
+      ① <i>Hợp âm khối</i>: bấm hợp âm rồi giữ, mỗi 2 phách đổi một lần ·
+      ② <i>Đều 4 phách</i>: bấm hợp âm ở mỗi phách 1-2-3-4 ·
+      ③ <i>Bass + hợp âm</i>: phách 1 và 3 bấm nốt trầm, phách 2 và 4 bấm hợp âm. Tập lần lượt ① → ② → ③.</li>
+    <li><b>Gõ nhịp:</b> khi Nghe mẫu sẽ có tiếng tích tắc mỗi phách, tiếng cao là phách 1 — đếm theo trước khi vào bài.</li>
     <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
     <li><b>Luyện bài:</b>

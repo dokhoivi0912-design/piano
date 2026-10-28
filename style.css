@@ -121,3 +121,4 @@ kbd { display: inline-block; min-width: 24px; text-align: center; padding: 1px 6
   #fall, body.midi-mode #fall { height: 260px; }
   nav { flex-wrap: wrap; }
 }
+body.level-orig #pattern { display: none; }

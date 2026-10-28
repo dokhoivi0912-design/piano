@@ -8,10 +8,13 @@ let keyEls = {};
 
 // 'keys' = computer keyboard (right hand only, folded into G4..C6), 'midi' = external MIDI keyboard (real pitch, any octave)
 let input = 'keys', hand = 'R'; // hand practised on MIDI: 'R' | 'L' | 'RL'
-try {
-  if (localStorage.getItem('input') === 'midi') input = 'midi';
-  if (['R', 'L', 'RL'].includes(localStorage.getItem('hand'))) hand = localStorage.getItem('hand');
-} catch {}
+let level = 'easy', pattern = 'block'; // version of the song and left-hand pattern (easy only)
+const saved = (k, ok) => { try { const v = localStorage.getItem(k); return ok.includes(v) ? v : null; } catch { return null; } };
+const save = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+input = saved('input', ['keys', 'midi']) || input;
+hand = saved('hand', ['R', 'L', 'RL']) || hand;
+level = saved('level', ['easy', 'orig']) || level;
+pattern = saved('pattern', ['block', 'beats', 'bass']) || pattern;
 const practisedHands = () => (input === 'midi' ? [...hand] : ['R']);
 const HAND_NAME = { R: 'Tay phải', L: 'Tay trái' };
 // Which on-screen key shows a note. The computer keyboard only has right-hand keys, so the left hand is heard, not drawn.
@@ -54,6 +57,13 @@ function noteOn(n, vol = 1) {
   });
   voices[n] = { g, oscs };
 }
+function click(accent) {
+  const c = audio(), t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+  o.type = 'square'; o.frequency.value = accent ? 1600 : 1000;
+  g.gain.setValueAtTime(accent ? 0.5 : 0.3, t);
+  g.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+  o.connect(g).connect(master); o.start(t); o.stop(t + 0.05);
+}
 function noteOff(n, rel = 0.35) {
   const v = voices[n];
   if (!v) return;
@@ -68,7 +78,7 @@ function noteOff(n, rel = 0.35) {
 // Keys to draw: the computer keymap, or (MIDI) both hands' real range widened to whole octaves.
 function pianoKeys() {
   if (input === 'keys') return Object.entries(KEYMAP).map(([code, n]) => [label(code), n]);
-  const midi = songEvents().flatMap((e) => e.notes.map(noteToMidi));
+  const midi = songEvents(undefined, level, 'bass').flatMap((e) => e.notes.map(noteToMidi));
   const lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
   return Array.from({ length: hi - lo + 1 }, (_, i) => midiToNote(lo + i)).map((n) => [n.startsWith('C') && !n.includes('#') ? n : '', n]);
 }
@@ -152,7 +162,7 @@ async function connectMidi() {
 
 function setInput(v) {
   input = v;
-  try { localStorage.setItem('input', v); } catch {}
+  save('input', v);
   document.querySelectorAll('[data-input]').forEach((b) => b.classList.toggle('active', b.dataset.input === v));
   buildPiano();
   reset('idle');
@@ -163,10 +173,30 @@ function setInput(v) {
 }
 function setHand(v) {
   hand = v;
-  try { localStorage.setItem('hand', v); } catch {}
+  save('hand', v);
   document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === v));
   reset('idle');
   setStatus(`Luyện <b>${v === 'RL' ? 'hai tay' : HAND_NAME[v].toLowerCase()}</b>${v === 'RL' ? '' : ' — web tự đệm tay còn lại'}.`);
+}
+
+// Version (easy / video original), left-hand pattern and section all decide which events are loaded.
+function loadSong() {
+  events = songEvents($('part').value || undefined, level, pattern);
+  document.body.classList.toggle('level-orig', level === 'orig');
+  info(); reset('idle');
+}
+function setLevel(v) {
+  level = v;
+  save('level', v);
+  document.querySelectorAll('[data-level]').forEach((b) => b.classList.toggle('active', b.dataset.level === v));
+  const part = $('part');
+  part.length = 1; // keep "Cả bài"
+  (v === 'easy' ? SONG.easy.sections : SONG.sections).forEach((s) => part.add(new Option(s.name, s.name)));
+  if (input === 'midi') buildPiano(); // the key range depends on the version
+  loadSong();
+  setStatus(v === 'easy'
+    ? 'Bản <b>Dễ</b>: giai điệu gọn trong 1 quãng tám, tay trái là hợp âm 3 nốt theo nhịp 4/4.'
+    : 'Bản <b>Gốc</b>: giống hệt video, khó hơn.');
 }
 
 // ---------- Song state ----------
@@ -177,7 +207,7 @@ let auto = [];     // events the web plays by itself (the other hand, or everyth
 let mode = 'idle'; // 'idle' | 'practice' | 'demo'
 let idx = 0, autoIdx = 0;
 let pos = 0;       // song position in beats; an event touches the keys when pos === event.start
-let wrong = 0, t0 = 0;
+let wrong = 0, t0 = 0, lastBeat = 0;
 let sounding = []; // auto-played notes still ringing: { n, lane, end }
 const leadIn = () => $('fall').clientHeight / BEAT_PX;
 const setStatus = (html) => { $('status').innerHTML = html; };
@@ -193,6 +223,7 @@ function reset(newMode) {
   });
   auto = newMode === 'demo' ? events : events.filter((e) => !hands.includes(e.hand));
   pos = newMode === 'idle' ? 0 : -leadIn();
+  lastBeat = Math.floor(pos);
   $('demoBtn').textContent = newMode === 'demo' ? '■ Dừng' : '▶ Nghe mẫu';
   $('practiceBtn').textContent = newMode === 'practice' ? 'Bắt đầu lại' : 'Bắt đầu luyện';
   updateTarget();
@@ -286,6 +317,12 @@ function tick(dt) {
     pos += Math.min(gap, Math.max(bps, gap * 6) * dt);
   } else pos += bps * dt;
 
+  // metronome while listening to the demo; the lead-in gives a count-in, beat 1 of each bar is accented
+  if (mode === 'demo' && Math.floor(pos) > lastBeat) {
+    lastBeat = Math.floor(pos);
+    if ($('metro').checked) click(((lastBeat % 4) + 4) % 4 === 0);
+  }
+
   // auto-played notes; in practice, notes that coincide with the waiting step sound together with it, not before
   sounding = sounding.filter((x) => (pos >= x.end ? (release(x.n), false) : true));
   const limit = s ? Math.min(pos, s.start - 0.15) : pos;
@@ -350,6 +387,17 @@ function draw() {
       }
       g.globalAlpha = 1;
     }
+    if (e.chord) {
+      // chord name above the chord, or at the left edge when the left hand isn't drawn (computer keyboard)
+      const els = e.notes.map((n) => keyEls[laneOf(e, n)]).filter(Boolean);
+      g.fillStyle = '#9cc4ea'; g.font = '700 13px Inter, sans-serif';
+      if (els.length) {
+        const x0 = els[0].offsetLeft, x1 = els.at(-1).offsetLeft + els.at(-1).offsetWidth;
+        g.fillText(e.chord, (x0 + x1) / 2, bottom - h - 6);
+      } else {
+        g.textAlign = 'left'; g.fillText(e.chord, 8, bottom - 6); g.textAlign = 'center';
+      }
+    }
   }
 
   // glow at the hit line for keys being pressed
@@ -370,24 +418,28 @@ function frame(now) {
 }
 
 // ---------- Init ----------
-SONG.sections.forEach((s) => $('part').add(new Option(s.name, s.name)));
 document.querySelectorAll('[data-input]').forEach((b) => { b.onclick = () => { b.blur(); setInput(b.dataset.input); }; });
+document.querySelectorAll('[data-level]').forEach((b) => { b.onclick = () => { b.blur(); setLevel(b.dataset.level); }; });
+$('pattern').value = pattern;
+$('pattern').onchange = (e) => {
+  pattern = e.target.value; save('pattern', pattern); e.target.blur(); loadSong();
+  setStatus(`Kiểu đệm: <b>${e.target.selectedOptions[0].text}</b>.`);
+};
 document.querySelectorAll('[data-hand]').forEach((b) => { b.onclick = () => { b.blur(); setHand(b.dataset.hand); }; });
 document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === hand));
-setInput(input);
 $('songTitle').textContent = SONG.title;
 const info = () => {
   const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
-  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} hợp âm/nốt tay trái · theo video piano (Đô trưởng)`;
+  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ, nhịp 4/4' : 'bản gốc theo video'} (Đô trưởng)`;
 };
-info();
+setInput(input);
+setLevel(level);
 $('tempo').value = SONG.bpm;
 $('tempoOut').textContent = SONG.bpm;
 $('tempo').oninput = (e) => { SONG.bpm = +e.target.value; $('tempoOut').textContent = SONG.bpm; };
 $('tempo').onchange = (e) => e.target.blur();
 $('part').onchange = (e) => {
-  events = songEvents(e.target.value || undefined);
-  e.target.blur(); info(); reset('idle');
+  e.target.blur(); loadSong();
   setStatus('Đã chọn đoạn. Bấm <b>Nghe mẫu</b> hoặc <b>Bắt đầu luyện</b>.');
 };
 $('practiceBtn').onclick = (e) => { e.currentTarget.blur(); startPractice(); };
