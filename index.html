@@ -2,32 +2,28 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1216">
 <title>Grand Piano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=3">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=4">
 </head>
 <body>
 <header class="top">
-  <div class="brand"><span class="logo" aria-hidden="true">𝄞</span><h1>Grand Piano</h1></div>
-  <label class="song-pick">
-    <span class="eyebrow">♪ Chọn bài</span>
-    <select id="song" aria-label="Chọn bài"></select>
-  </label>
-  <p class="muted info" id="songArtist"></p>
+  <select id="song" aria-label="Chọn bài"></select>
   <nav>
     <div class="seg" role="group" aria-label="Chọn cách chơi">
       <button class="btn" data-input="keys">⌨️ Bàn phím</button>
       <button class="btn" data-input="midi">🎹 Đàn MIDI</button>
     </div>
-    <label class="toggle"><input type="checkbox" id="showNotes" checked> Tên nốt</label>
+    <button class="btn toggle-btn" id="showNotes" aria-pressed="true">Tên nốt</button>
     <button class="btn ghost" id="guideBtn">Hướng dẫn</button>
   </nav>
 </header>
 
 <section class="toolbar" aria-label="Điều khiển luyện tập">
-  <button class="btn gold" id="practiceBtn" title="Phím tắt: Enter">Bắt đầu luyện</button>
+  <button class="btn primary" id="practiceBtn" title="Phím tắt: Enter">Bắt đầu luyện</button>
   <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
   <span class="sep"></span>
   <div class="seg" role="group" aria-label="Chọn bản">
@@ -47,7 +43,7 @@
     <button class="btn" data-hand="L">Tay trái</button>
     <button class="btn" data-hand="RL">Hai tay</button>
   </div>
-  <label class="toggle"><input type="checkbox" id="metro" checked> Gõ nhịp</label>
+  <button class="btn toggle-btn" id="metro" aria-pressed="true" title="Tiếng tích tắc theo phách khi nghe mẫu"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 3h5l4 18h-13zM12 6.5l-.9 4h1.8zM8.2 17.5h7.6l-.7-3H8.9zM13 13l5.5-7.5 1.2.9-5 6.6z"/></svg>Gõ nhịp</button>
   <label class="tempo">Tốc độ <input type="range" id="tempo" min="50" max="130" step="1"> <output id="tempoOut"></output></label>
 </section>
 
@@ -93,12 +89,12 @@
       Màn hình chỉ hiện nốt rơi kèm tên nốt (Đô, Rê, Mi…); dải phím nhỏ phía dưới giống đàn của bạn, phím <b>C</b> có ghi số quãng tám để dễ dóng.
       Bấm đúng tên nốt ở <b>quãng tám nào cũng được</b>.</li>
     <li><b>Hai tay (đàn MIDI):</b> chọn <i>Tay phải</i>, <i>Tay trái</i> hoặc <i>Hai tay</i>. Khi luyện một tay, web tự đệm tay còn lại.
-      Nốt <b style="color:#e8cf98">vàng</b> là tay phải (giai điệu), nốt <b style="color:#9cc4ea">xanh</b> là tay trái (hợp âm).
-      Với hợp âm, bấm <b>đủ các nốt</b> theo thứ tự nào cũng được — nốt đúng chuyển <b style="color:#8fd19e">xanh lá</b>, đủ thì sang bước tiếp.
+      Nốt <b style="color:#7fd3c6">xanh ngọc</b> là tay phải (giai điệu), nốt <b style="color:#8fa8e8">xanh dương</b> là tay trái (hợp âm).
+      Với hợp âm, bấm <b>đủ các nốt</b> theo thứ tự nào cũng được — nốt đúng chuyển <b style="color:#b4e07a">xanh lá</b>, đủ thì sang bước tiếp.
       Mẹo: luyện từng tay cho thuộc rồi mới chọn Hai tay.</li>
     <li><b>Bàn phím máy tính</b> chỉ đánh tay phải; hợp âm tay trái web tự đệm cho bạn nghe.</li>
     <li><b>Bản Dễ / Gốc:</b> bản <i>Dễ</i> có giai điệu gọn trong 1 quãng tám (Sol → Sol), nhịp làm tròn đều, tay trái chỉ dùng hợp âm 3 nốt
-      C (Đô-Mi-Sol), Dm (Rê-Fa-La), Em (Mi-Sol-Si), F (Fa-La-Đô), G (Sol-Si-Rê), Am (La-Đô-Mi). Tên hợp âm hiện màu xanh trên nốt rơi.
+      C (Đô-Mi-Sol), Dm (Rê-Fa-La), Em (Mi-Sol-Si), F (Fa-La-Đô), G (Sol-Si-Rê), Am (La-Đô-Mi). Tên hợp âm hiện màu xanh dương trên nốt rơi.
       Bản <i>Gốc</i> chép theo sheet piano cùng tông (♩ = 92): đủ bài theo thứ tự Intro → Verse 1 (2 lần) → Điệp khúc → Refrain → Interlude →
       Verse 2 → Điệp khúc → Refrain → Bridge → Điệp khúc → Refrain → Outro. Tay trái đổi kiểu theo sheet: Intro hợp âm khối, Verse nốt trầm + quãng 5,
       Điệp khúc rải móc đơn. Chọn từng phần trong ô đoạn để luyện riêng.</li>
@@ -110,19 +106,21 @@
       ③ <i>Bass + hợp âm</i>: phách 1 và 3 bấm nốt trầm, phách 2 và 4 bấm hợp âm. Tập lần lượt ① → ② → ③.</li>
     <li><b>Gõ nhịp:</b> khi Nghe mẫu sẽ có tiếng tích tắc mỗi phách, tiếng cao là phách 1 — đếm theo trước khi vào bài.</li>
     <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
+    <li><b>Điện thoại:</b> chạm trực tiếp lên phím đàn trên màn hình. Cầm <b>dọc</b>: nốt rơi ở trên, bàn phím ở dưới, tự trượt tới phím cần bấm (vuốt ngang trên dải nốt để xem phím khác).
+      Quay <b>ngang</b>: hiện đủ 11 phím trắng Sol → Đô, phím to để đánh bằng nhiều ngón.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
     <li><b>Luyện bài:</b>
       ① chọn đoạn (Cả bài hoặc Đoạn 1–13, mỗi đoạn ~20 giây của video) ·
       ② bấm <i>Nghe mẫu</i> để quen giai điệu ·
-      ③ bấm <i>Bắt đầu luyện</i>: nốt vàng rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
+      ③ bấm <i>Bắt đầu luyện</i>: nốt xanh ngọc rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
       Chữ trên nốt rơi là phím máy tính cần bấm. Nốt càng dài thì giữ càng lâu. Bấm sai thì phím nháy đỏ.</li>
     <li>Luyện xong muốn luyện lại? Bấm <kbd>Enter</kbd> — không cần lướt tìm nút. <b>Tua:</b> bấm hoặc kéo trên thanh tiến độ, dùng nút ⏮ ⏭ bên phải thanh (nút giữa là chạy / dừng), hoặc <kbd>←</kbd> <kbd>→</kbd> để lùi/tới 1 ô nhịp (giữ <kbd>Shift</kbd> = 4 ô), <kbd>Home</kbd> về đầu bài. Luyện lại bằng Enter sẽ bắt đầu từ chỗ vừa tua. Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
     <li>Mẹo: luyện chậm từng đoạn trước, thuộc rồi mới tăng tốc độ. Nếu phím không kêu, thử tắt bộ gõ tiếng Việt.</li>
   </ol>
-  <form method="dialog"><button class="btn gold">Đã hiểu</button></form>
+  <form method="dialog"><button class="btn primary">Đã hiểu</button></form>
 </dialog>
 
-<script src="data.js?v=3"></script>
-<script src="app.js?v=3"></script>
+<script src="data.js?v=4"></script>
+<script src="app.js?v=4"></script>
 </body>
 </html>

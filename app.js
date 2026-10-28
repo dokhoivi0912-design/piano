@@ -21,7 +21,10 @@ const HAND_NAME = { R: 'Tay phải', L: 'Tay trái' };
 // Which on-screen key shows a note. The computer keyboard only has right-hand keys, so the left hand is heard, not drawn.
 const laneOf = (e, n) => (input === 'midi' ? n : e.hand === 'R' ? fitToKeys(n) : null);
 const pitchOf = (e, n) => (input === 'keys' && e.hand === 'R' ? fitToKeys(n) : n);
-const nameOf = (n) => (input === 'midi' ? solfege(n) : keyOf(fitToKeys(n)));
+// Touch screens have no letter keys, so falling notes show Đô/Rê/Mi there
+const TOUCH = matchMedia('(pointer: coarse)').matches;
+const nameOf = (n) => (input === 'midi' || TOUCH ? solfege(n) : keyOf(fitToKeys(n)));
+const isOn = (id) => $(id).getAttribute('aria-pressed') === 'true';
 
 // ---------- Audio: simple additive "piano-ish" synth ----------
 let ctx, master;
@@ -97,12 +100,13 @@ function buildPiano() {
     const el = document.createElement('div');
     el.className = `key ${black ? 'black' : 'white'}`;
     el.title = n;
-    el.innerHTML = `<span class="lbl">${lbl}</span><span class="nm">${solfege(n)}</span>`;
+    el.innerHTML = `<span class="lbl">${TOUCH && input === 'keys' ? '' : lbl}</span><span class="nm">${solfege(n)}</span>`;
     if (black) el.style.left = `calc(${(whiteIndex / whites) * 100}% - var(--black-w) / 2)`;
     else whiteIndex++;
     el.addEventListener('pointerdown', (e) => { e.preventDefault(); press(n); });
     el.addEventListener('pointerup', () => release(n));
     el.addEventListener('pointerleave', () => release(n));
+    el.addEventListener('pointercancel', () => release(n));
     piano.appendChild(el);
     keyEls[n] = el;
   });
@@ -191,7 +195,7 @@ function setHand(v) {
 function loadSong() {
   events = songEvents($('part').value || undefined, level, pattern, song);
   document.body.classList.toggle('level-orig', level === 'orig');
-  startAt = 0; info(); reset('idle');
+  startAt = 0; songLen = songEnd(); reset('idle');
 }
 function setLevel(v) {
   level = v;
@@ -264,6 +268,11 @@ function updateTarget() {
   Object.values(keyEls).forEach((el) => el.classList.remove('target', 'hit'));
   const s = mode === 'practice' && steps[idx];
   if (s) s.events.forEach((e) => e.notes.forEach((n) => keyEls[laneOf(e, n)]?.classList.add(s.hit.has(matchKey(n, input)) ? 'hit' : 'target')));
+  // narrow screens show only part of the keyboard: scroll the key to press into view
+  const t = document.querySelector('.key.target'), stage = $('piano').parentElement;
+  if (t && (t.offsetLeft < stage.scrollLeft || t.offsetLeft + t.offsetWidth > stage.scrollLeft + stage.clientWidth)) {
+    stage.scrollTo({ left: t.offsetLeft + t.offsetWidth / 2 - stage.clientWidth / 2, behavior: 'smooth' });
+  }
 }
 
 function startPractice() {
@@ -328,10 +337,11 @@ function toggleDemo() {
 }
 
 // ---------- Seeking: jump to a bar (progress bar, ← → keys) ----------
-const songEnd = () => (events.length ? Math.max(...events.map((e) => e.start + e.b)) : 4);
+const songEnd = () => events.reduce((a, e) => Math.max(a, e.start + e.b), 4);
+let songLen = songEnd();
 const barNo = (beat) => Math.floor(beat / 4) + 1;
 function seek(beat) {
-  const b = Math.max(0, Math.min(Math.floor(beat / 4) * 4, Math.floor((songEnd() - 0.01) / 4) * 4));
+  const b = Math.max(0, Math.min(Math.floor(beat / 4) * 4, Math.floor((songLen - 0.01) / 4) * 4));
   if (b === startAt && mode === 'idle') return;
   startAt = b;
   if (mode === 'idle') {
@@ -341,6 +351,8 @@ function seek(beat) {
   const m = mode, wasPaused = paused;
   reset(m);
   paused = wasPaused; // seeking while paused stays paused, like a music player
+  // jump straight there: notes already on screen, one beat before the bar instead of a full lead-in
+  pos = startAt - 1; lastBeat = Math.floor(pos);
   setStatus(`Tua tới <b>ô ${barNo(startAt)}</b>${m === 'practice' && steps[idx] ? ` — ${describe(steps[idx])}` : ''}`);
 }
 // jump from the current bar (or the seek point, during the lead-in) by `beats`
@@ -355,11 +367,11 @@ $('backBtn').onclick = (e) => { e.currentTarget.blur(); skip(-4); };
 $('fwdBtn').onclick = (e) => { e.currentTarget.blur(); skip(4); };
 $('playBtn').onclick = (e) => { e.currentTarget.blur(); playPause(); };
 const seekBar = $('seek');
-const seekAt = (e) => { const r = seekBar.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * songEnd()); };
+const seekAt = (e) => { const r = seekBar.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * songLen); };
 seekBar.onpointerdown = (e) => { seekBar.setPointerCapture(e.pointerId); seekAt(e); };
 seekBar.onpointermove = (e) => {
   const r = seekBar.getBoundingClientRect();
-  seekBar.title = `Ô ${barNo(((e.clientX - r.left) / r.width) * songEnd())}`;
+  seekBar.title = `Ô ${barNo(((e.clientX - r.left) / r.width) * songLen)}`;
   if (seekBar.hasPointerCapture(e.pointerId)) seekAt(e);
 };
 
@@ -376,7 +388,7 @@ function tick(dt) {
   // metronome while listening to the demo; the lead-in gives a count-in, beat 1 of each bar is accented
   if (mode === 'demo' && Math.floor(pos) > lastBeat) {
     lastBeat = Math.floor(pos);
-    if ($('metro').checked) click(((lastBeat % 4) + 4) % 4 === 0);
+    if (isOn('metro')) click(((lastBeat % 4) + 4) % 4 === 0);
   }
 
   // auto-played notes; in practice, notes that coincide with the waiting step sound together with it, not before
@@ -396,9 +408,9 @@ function tick(dt) {
   }
 }
 
-const COLORS = { R: ['#fff1cc', '#e8cf98', '#a8874c'], L: ['#e3f1ff', '#9cc4ea', '#4f7fae'] };
+const COLORS = { R: ['#dff7f3', '#7fd3c6', '#3f9a8e'], L: ['#e8edff', '#8fa8e8', '#5470b8'] };
 function draw() {
-  const end = songEnd(), p = Math.max(0, Math.min(mode === 'idle' ? startAt : pos, end));
+  const end = songLen, p = Math.max(0, Math.min(mode === 'idle' ? startAt : pos, end));
   $('bar').style.width = `${(p / end) * 100}%`;
   $('where').textContent = `Ô ${barNo(p)} / ${barNo(end - 0.01)}`;
   seekBar.setAttribute('aria-valuenow', barNo(p));
@@ -419,8 +431,8 @@ function draw() {
     const bottom = H - (e.start - pos) * BEAT_PX, h = Math.max(e.b * BEAT_PX - 4, 10); // grace notes stay visible
     if (bottom < 0 || bottom - h > H) continue;
     if (e.section) {
-      g.fillStyle = '#c9a96e55'; g.fillRect(0, bottom, W, 1);
-      g.fillStyle = '#c9a96e'; g.textAlign = 'right'; g.font = '600 11px Inter, sans-serif';
+      g.fillStyle = '#5ec4b655'; g.fillRect(0, bottom, W, 1);
+      g.fillStyle = '#5ec4b6'; g.textAlign = 'right'; g.font = '600 11px Inter, sans-serif';
       g.fillText(e.section.toUpperCase(), W - 8, bottom - 6); g.textAlign = 'center';
     }
     const isNext = cur && cur.events.includes(e);
@@ -431,7 +443,7 @@ function draw() {
       if (!el) continue;
       const kx = el.offsetLeft + 2, kw = el.offsetWidth - 4;
       const hit = isNext && cur.hit.has(matchKey(n, input));
-      const [hi, mid, lo] = hit ? ['#d9ffe3', '#8fd19e', '#4e9a63'] : COLORS[e.hand];
+      const [hi, mid, lo] = hit ? ['#f1ffd9', '#b4e07a', '#6f9a3a'] : COLORS[e.hand];
       g.globalAlpha = done ? 0.25 : mine ? 1 : 0.4;
       const grad = g.createLinearGradient(0, bottom - h, 0, bottom);
       grad.addColorStop(0, isNext ? hi : mid);
@@ -442,7 +454,7 @@ function draw() {
       g.shadowBlur = 0;
       if (mine && (h > 18 || isNext)) {
         const inside = h > 18; // too short to hold text: write it above the block
-        g.fillStyle = inside ? '#1d1a12' : mid; g.font = `700 ${input === 'midi' ? 11 : 15}px Inter, sans-serif`;
+        g.fillStyle = inside ? '#0d1f1c' : mid; g.font = `700 ${input === 'midi' ? 11 : 15}px Inter, sans-serif`;
         g.fillText(nameOf(n), kx + kw / 2, inside ? bottom - 7 : bottom - h - 6);
       }
       g.globalAlpha = 1;
@@ -450,7 +462,7 @@ function draw() {
     if (e.chord) {
       // chord name above the chord, or at the left edge when the left hand isn't drawn (computer keyboard)
       const els = e.notes.map((n) => keyEls[laneOf(e, n)]).filter(Boolean);
-      g.fillStyle = '#9cc4ea'; g.font = '700 13px Inter, sans-serif';
+      g.fillStyle = '#8fa8e8'; g.font = '700 13px Inter, sans-serif';
       if (els.length) {
         const x0 = els[0].offsetLeft, x1 = els.at(-1).offsetLeft + els.at(-1).offsetWidth;
         g.fillText(e.chord, (x0 + x1) / 2, bottom - h - 6);
@@ -464,7 +476,7 @@ function draw() {
   Object.values(keyEls).forEach((el) => {
     if (!el.classList.contains('on')) return;
     const grad = g.createLinearGradient(0, H - 60, 0, H);
-    grad.addColorStop(0, '#e8cf9800'); grad.addColorStop(1, '#e8cf98aa');
+    grad.addColorStop(0, '#7fd3c600'); grad.addColorStop(1, '#7fd3c6aa');
     g.fillStyle = grad; g.fillRect(el.offsetLeft, H - 60, el.offsetWidth, 60);
   });
 }
@@ -490,10 +502,6 @@ document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('acti
 SONGS.forEach((x, i) => $('song').add(new Option(`${x.title} · ${x.artist}`, i)));
 $('song').value = SONGS.indexOf(song);
 $('song').onchange = (e) => { e.target.blur(); setSong(+e.target.value); };
-const info = () => {
-  const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
-  $('songArtist').textContent = `${level === 'easy' ? 'Bản dễ' : 'Bản gốc (sheet)'} · ${r} nốt tay phải · ${l} tay trái · 4/4, Đô trưởng`;
-};
 setInput(input);
 setSong(SONGS.indexOf(song));
 $('tempo').oninput = (e) => { song.bpm = +e.target.value; $('tempoOut').textContent = song.bpm; };
@@ -505,6 +513,12 @@ $('part').onchange = (e) => {
 $('practiceBtn').onclick = (e) => { e.currentTarget.blur(); startPractice(); };
 $('demoBtn').onclick = (e) => { e.currentTarget.blur(); toggleDemo(); };
 $('guideBtn').onclick = () => $('guide').showModal();
-$('showNotes').onchange = (e) => document.body.classList.toggle('hide-notes', !e.target.checked);
+// On/off buttons (aria-pressed) for metronome and note names
+const sync = () => document.body.classList.toggle('hide-notes', !isOn('showNotes'));
+document.querySelectorAll('.toggle-btn').forEach((b) => {
+  b.setAttribute('aria-pressed', saved(b.id, ['true', 'false']) || 'true');
+  b.onclick = () => { b.blur(); b.setAttribute('aria-pressed', String(!isOn(b.id))); save(b.id, String(isOn(b.id))); sync(); };
+});
+sync();
 requestAnimationFrame(frame);
 try { if (!localStorage.getItem('seenGuide4')) { $('guide').showModal(); localStorage.setItem('seenGuide4', '1'); } } catch {}
