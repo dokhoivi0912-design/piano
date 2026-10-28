@@ -26,19 +26,27 @@
         <p class="muted" id="songArtist"></p>
       </div>
       <div class="controls">
+        <select class="btn" id="part" aria-label="Chọn đoạn">
+          <option value="">Cả bài</option>
+          <option value="Verse">Verse</option>
+          <option value="Điệp khúc">Điệp khúc</option>
+        </select>
         <button class="btn gold" id="practiceBtn">Bắt đầu luyện</button>
         <button class="btn" id="demoBtn">▶ Nghe mẫu</button>
         <label class="tempo">Tốc độ <input type="range" id="tempo" min="50" max="130" step="1"> <output id="tempoOut"></output></label>
       </div>
     </div>
     <div class="progress"><div id="bar"></div></div>
-    <p class="status" id="status">Nhấn <b>Bắt đầu luyện</b> — phím cần bấm sẽ sáng màu vàng trên đàn.</p>
-    <div class="strip" id="strip"></div>
+    <p class="status" id="status">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
+    <p class="tip">Mẹo: <kbd>Space</kbd> nghe lại nốt cần đánh · nốt dài = giữ phím lâu hơn · nốt rơi sẽ chờ đến khi bạn bấm đúng.</p>
   </section>
 
   <section class="piano-wrap">
-    <div class="piano-lid"><span>GRAND</span></div>
-    <div class="piano" id="piano"></div>
+    <div class="stage">
+      <canvas id="fall"></canvas>
+      <div class="piano-lid"></div>
+      <div class="piano" id="piano"></div>
+    </div>
   </section>
 </main>
 
@@ -47,15 +55,19 @@
   <ol>
     <li><b>Phím trắng</b> là các nốt tự nhiên: Đô (C) – Rê (D) – Mi (E) – Fa (F) – Sol (G) – La (A) – Si (B).</li>
     <li><b>Phím đen</b> là nốt thăng (#), nằm giữa hai phím trắng.</li>
-    <li><b>Hàng dưới</b> bàn phím = quãng tám thấp:<br>
-      phím trắng <kbd>Z</kbd><kbd>X</kbd><kbd>C</kbd><kbd>V</kbd><kbd>B</kbd><kbd>N</kbd><kbd>M</kbd>,
-      phím đen <kbd>S</kbd><kbd>D</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd>.</li>
-    <li><b>Hàng trên</b> = quãng tám cao:<br>
-      phím trắng <kbd>Q</kbd><kbd>W</kbd><kbd>E</kbd><kbd>R</kbd><kbd>T</kbd><kbd>Y</kbd><kbd>U</kbd><kbd>I</kbd>,
-      phím đen <kbd>2</kbd><kbd>3</kbd><kbd>5</kbd><kbd>6</kbd><kbd>7</kbd>.</li>
+    <li><b>Phím trắng</b> nằm trên hàng giữa:<br>
+      <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd><kbd>'</kbd><br>
+      = La · Si · <b>Đô</b> · Rê · Mi · Fa · Sol · La · Si · Đô · Rê</li>
+    <li><b>Phím đen</b> nằm ở hàng trên: <kbd>W</kbd><kbd>R</kbd><kbd>T</kbd><kbd>U</kbd><kbd>I</kbd><kbd>O</kbd><kbd>[</kbd>. Bài luyện chỉ dùng phím trắng.</li>
+    <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
-    <li><b>Luyện bài:</b> bấm <i>Nghe mẫu</i> trước để quen giai điệu, rồi <i>Bắt đầu luyện</i>. Phím vàng là nốt tiếp theo — bấm đúng mới chuyển nốt. Bấm sai phím sẽ nháy đỏ.</li>
-    <li>Mẹo: đặt tay trái lên hàng <kbd>Z</kbd>–<kbd>M</kbd>, tay phải lên <kbd>Q</kbd>–<kbd>I</kbd>. Tắt bộ gõ tiếng Việt nếu thấy lạ.</li>
+    <li><b>Luyện bài:</b>
+      ① chọn đoạn (Cả bài / Verse / Điệp khúc) ·
+      ② bấm <i>Nghe mẫu</i> để quen giai điệu ·
+      ③ bấm <i>Bắt đầu luyện</i>: nốt vàng rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
+      Chữ trên nốt rơi là phím máy tính cần bấm. Nốt càng dài thì giữ càng lâu. Bấm sai thì phím nháy đỏ.</li>
+    <li>Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
+    <li>Mẹo: luyện chậm từng đoạn trước, thuộc rồi mới tăng tốc độ. Nếu phím không kêu, thử tắt bộ gõ tiếng Việt.</li>
   </ol>
   <form method="dialog"><button class="btn gold">Đã hiểu</button></form>
 </dialog>
