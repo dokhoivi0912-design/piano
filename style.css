@@ -40,7 +40,14 @@ nav { display: flex; gap: 12px; align-items: center; flex: none; }
 
 .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px 20px; }
 .sep { width: 1px; align-self: stretch; background: var(--line); margin: 0 4px; }
-.progress { height: 3px; background: var(--line); margin: 0 20px; border-radius: 3px; overflow: hidden; }
+.seekrow { display: flex; align-items: center; gap: 12px; margin: 0 20px; }
+.progress { flex: 1; height: 8px; background: var(--line); border-radius: 8px; cursor: pointer; touch-action: none; position: relative;
+  background-clip: content-box; padding: 6px 0; box-sizing: content-box; }
+.progress:hover #bar, .progress:active #bar { box-shadow: 0 0 0 3px #c9a96e33; }
+#bar { position: relative; }
+#bar::after { content: ''; position: absolute; right: -7px; top: 50%; width: 14px; height: 14px; margin-top: -7px; border-radius: 50%;
+  background: var(--gold-hi); box-shadow: 0 0 8px #e8cf9888; }
+.where { font: 600 12px Inter, sans-serif; color: var(--muted); font-variant-numeric: tabular-nums; min-width: 70px; text-align: right; }
 .statusline { display: flex; gap: 6px 18px; align-items: center; flex-wrap: wrap; padding: 6px 20px; min-height: 36px; font-size: 13px; }
 .statusline p { margin: 0; }
 .status { flex: 1; min-width: 200px; color: var(--muted); }
@@ -60,7 +67,7 @@ input[type=range] { accent-color: var(--gold); width: 110px; }
 input[type=checkbox] { accent-color: var(--gold); }
 
 .eyebrow { color: var(--gold); font-size: 10px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; }
-#bar { height: 100%; width: 0; background: var(--gold); transition: width .2s; }
+#bar { height: 100%; width: 0; background: var(--gold); border-radius: 8px; }
 .status b { color: var(--text); }
 
 .tip { font-size: 12px; color: var(--muted); }
@@ -134,7 +141,7 @@ kbd { display: inline-block; min-width: 24px; text-align: center; padding: 1px 6
   #song { min-width: 0; font-size: 17px; }
   .toolbar { flex-wrap: nowrap; overflow-x: auto; padding: 8px 12px; scrollbar-width: none; }
   .toolbar > * { flex: none; }
-  .progress { margin: 0 12px; }
+  .seekrow { margin: 0 12px; }
   .statusline { padding: 4px 12px; }
   .tip { display: none; }
   .piano-wrap { margin: 0 6px 6px; padding: 8px; }

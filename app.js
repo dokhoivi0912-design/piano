@@ -122,6 +122,12 @@ const held = new Set();
 addEventListener('keydown', (e) => {
   if (e.metaKey || e.ctrlKey || e.altKey || $('guide').open) return;
   if (e.code === 'Space') { e.preventDefault(); return hint(); }
+  const jump = { ArrowLeft: -4, ArrowRight: 4 }[e.code];
+  if (jump && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
+    e.preventDefault();
+    return seek(Math.max(startAt, Math.floor(Math.max(pos, 0) / 4) * 4) + jump * (e.shiftKey ? 4 : 1));
+  }
+  if (e.code === 'Home') { e.preventDefault(); return seek(0); }
   if (e.code === 'Enter' && !e.repeat && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); return startPractice(); }
   const n = KEYMAP[e.code];
   if (!n || e.repeat) return;
@@ -185,7 +191,7 @@ function setHand(v) {
 function loadSong() {
   events = songEvents($('part').value || undefined, level, pattern, song);
   document.body.classList.toggle('level-orig', level === 'orig');
-  info(); reset('idle');
+  startAt = 0; info(); reset('idle');
 }
 function setLevel(v) {
   level = v;
@@ -218,6 +224,8 @@ let mode = 'idle'; // 'idle' | 'practice' | 'demo'
 let idx = 0, autoIdx = 0;
 let pos = 0;       // song position in beats; an event touches the keys when pos === event.start
 let wrong = 0, t0 = 0, lastBeat = 0;
+let startAt = 0;   // bar line (in beats) where practice / demo begins; moved by seeking
+let startIdx = 0;  // first practice step at or after startAt
 let sounding = []; // auto-played notes still ringing: { n, lane, end }
 const leadIn = () => $('fall').clientHeight / BEAT_PX;
 const setStatus = (html) => { $('status').innerHTML = html; };
@@ -232,7 +240,9 @@ function reset(newMode) {
     s.hit = new Set();
   });
   auto = newMode === 'demo' ? events : events.filter((e) => !hands.includes(e.hand));
-  pos = newMode === 'idle' ? 0 : -leadIn();
+  const from = (list) => { const i = list.findIndex((x) => x.start >= startAt - 0.15); return i < 0 ? list.length : i; };
+  idx = startIdx = from(steps); autoIdx = from(auto);
+  pos = newMode === 'idle' ? startAt : startAt - leadIn();
   lastBeat = Math.floor(pos);
   $('demoBtn').textContent = newMode === 'demo' ? '■ Dừng' : '▶ Nghe mẫu';
   $('practiceBtn').textContent = newMode === 'practice' ? 'Bắt đầu lại' : 'Bắt đầu luyện';
@@ -253,13 +263,12 @@ function updateTarget() {
   Object.values(keyEls).forEach((el) => el.classList.remove('target', 'hit'));
   const s = mode === 'practice' && steps[idx];
   if (s) s.events.forEach((e) => e.notes.forEach((n) => keyEls[laneOf(e, n)]?.classList.add(s.hit.has(matchKey(n, input)) ? 'hit' : 'target')));
-  $('bar').style.width = `${(idx / Math.max(steps.length, 1)) * 100}%`;
 }
 
 function startPractice() {
   audio();
   reset('practice');
-  setStatus(`Nốt đầu tiên đang rơi xuống — ${describe(steps[0])}.`);
+  if (steps[idx]) setStatus(`${startAt ? `Luyện từ <b>ô ${barNo(startAt)}</b> · ` : ''}Nốt đầu tiên đang rơi xuống — ${describe(steps[idx])}.`);
 }
 
 function checkPractice(n) {
@@ -279,7 +288,7 @@ function checkPractice(n) {
     return;
   }
   s.hit.add(k);
-  if (idx === 0 && s.hit.size === 1) t0 = performance.now();
+  if (!t0) t0 = performance.now();
   if (s.hit.size < s.need.size) {
     updateTarget();
     return setStatus(`Đúng rồi, bấm tiếp: ${describe(s)}`);
@@ -296,7 +305,7 @@ function finish() {
   mode = 'idle';
   sounding.forEach((s) => release(s.n)); sounding = [];
   const secs = Math.round((performance.now() - t0) / 1000);
-  const total = steps.reduce((a, s) => a + s.need.size, 0);
+  const total = steps.slice(startIdx).reduce((a, s) => a + s.need.size, 0);
   const acc = Math.round((total / (total + wrong)) * 100);
   $('practiceBtn').textContent = 'Luyện lại';
   setStatus(`🎉 <b>Hoàn thành!</b> Sai <b>${wrong}</b> lần · độ chính xác <b>${acc}%</b> · thời gian <b>${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</b>`);
@@ -316,6 +325,30 @@ function toggleDemo() {
   reset('demo');
   setStatus('Đang phát mẫu cả hai tay — vàng là tay phải, xanh là tay trái.');
 }
+
+// ---------- Seeking: jump to a bar (progress bar, ← → keys) ----------
+const songEnd = () => (events.length ? Math.max(...events.map((e) => e.start + e.b)) : 4);
+const barNo = (beat) => Math.floor(beat / 4) + 1;
+function seek(beat) {
+  const b = Math.max(0, Math.min(Math.floor(beat / 4) * 4, Math.floor((songEnd() - 0.01) / 4) * 4));
+  if (b === startAt && mode === 'idle') return;
+  startAt = b;
+  if (mode === 'idle') {
+    pos = startAt;
+    return setStatus(`Tua tới <b>ô ${barNo(startAt)}</b> — bấm <kbd>Enter</kbd> để luyện hoặc <b>Nghe mẫu</b> để nghe từ đây.`);
+  }
+  const m = mode;
+  reset(m);
+  setStatus(`Tua tới <b>ô ${barNo(startAt)}</b>${m === 'practice' && steps[idx] ? ` — ${describe(steps[idx])}` : ''}`);
+}
+const seekBar = $('seek');
+const seekAt = (e) => { const r = seekBar.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * songEnd()); };
+seekBar.onpointerdown = (e) => { seekBar.setPointerCapture(e.pointerId); seekAt(e); };
+seekBar.onpointermove = (e) => {
+  const r = seekBar.getBoundingClientRect();
+  seekBar.title = `Ô ${barNo(((e.clientX - r.left) / r.width) * songEnd())}`;
+  if (seekBar.hasPointerCapture(e.pointerId)) seekAt(e);
+};
 
 // ---------- Falling notes ----------
 function tick(dt) {
@@ -346,13 +379,16 @@ function tick(dt) {
     });
   }
   if (mode === 'demo') {
-    $('bar').style.width = `${(autoIdx / auto.length) * 100}%`;
     if (!auto[autoIdx] && !sounding.length) reset('idle'), setStatus('Hết bài mẫu. Giờ bấm <b>Bắt đầu luyện</b> để tự đánh nhé!');
   }
 }
 
 const COLORS = { R: ['#fff1cc', '#e8cf98', '#a8874c'], L: ['#e3f1ff', '#9cc4ea', '#4f7fae'] };
 function draw() {
+  const end = songEnd(), p = Math.max(0, Math.min(mode === 'idle' ? startAt : pos, end));
+  $('bar').style.width = `${(p / end) * 100}%`;
+  $('where').textContent = `Ô ${barNo(p)} / ${barNo(end - 0.01)}`;
+  seekBar.setAttribute('aria-valuenow', barNo(p));
   const c = $('fall'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
   if (c.width !== W * dpr || c.height !== H * dpr) { c.width = W * dpr; c.height = H * dpr; }
   const g = c.getContext('2d');
