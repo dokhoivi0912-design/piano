@@ -19,10 +19,18 @@ let song = SONGS[+saved('song', SONGS.map((_, i) => String(i))) || 0];
 const practisedHands = () => (input === 'midi' ? [...hand] : ['R']);
 const HAND_NAME = { R: 'Tay phải', L: 'Tay trái' };
 // Which on-screen key shows a note. The computer keyboard only has right-hand keys, so the left hand is heard, not drawn.
-const laneOf = (e, n) => (input === 'midi' ? n : e.hand === 'R' ? fitToKeys(n) : null);
+const laneOf = (e, n) => (input === 'midi' ? onKeys(n) : e.hand === 'R' ? fitToKeys(n) : null);
+// a note outside the drawn keys (phones show 3 octaves) is shown an octave up/down
+let keyLo = 0, keyHi = 127;
+const onKeys = (n) => { let m = noteToMidi(n); while (m < keyLo) m += 12; while (m > keyHi) m -= 12; return midiToNote(m); };
 const pitchOf = (e, n) => (input === 'keys' && e.hand === 'R' ? fitToKeys(n) : n);
 // Touch screens have no letter keys, so falling notes show Đô/Rê/Mi there
+// Touch screens play on the screen keys: held upright = right hand on a few big keys (two thumbs),
+// sideways = both hands like a MIDI keyboard (phones get C3–C6 only, so keys stay finger-sized).
 const TOUCH = matchMedia('(pointer: coarse)').matches;
+const PHONE = TOUCH && Math.min(screen.width, screen.height) < 600;
+const landscape = matchMedia('(orientation: landscape)');
+const touchInput = () => (landscape.matches ? 'midi' : 'keys');
 const nameOf = (n) => (input === 'midi' || TOUCH ? solfege(n) : keyOf(fitToKeys(n)));
 const isOn = (id) => $(id).getAttribute('aria-pressed') === 'true';
 
@@ -83,7 +91,8 @@ function noteOff(n, rel = 0.35) {
 function pianoKeys() {
   if (input === 'keys') return Object.entries(KEYMAP).map(([code, n]) => [label(code), n]);
   const midi = songEvents(undefined, level, 'bass', song).flatMap((e) => e.notes.map(noteToMidi));
-  const lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
+  let lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
+  if (PHONE) { lo = Math.max(lo, 48); hi = Math.min(hi, 84); }
   return Array.from({ length: hi - lo + 1 }, (_, i) => midiToNote(lo + i)).map((n) => [n.startsWith('C') && !n.includes('#') ? n : '', n]);
 }
 
@@ -94,6 +103,9 @@ function buildPiano() {
   const keys = pianoKeys();
   const whites = keys.filter(([, n]) => !n.includes('#')).length;
   document.body.classList.toggle('midi-mode', input === 'midi');
+  const ms = keys.map(([, n]) => noteToMidi(n));
+  keyLo = Math.min(...ms); keyHi = Math.max(...ms);
+  piano.parentElement.style.setProperty('--whites', whites);
   let whiteIndex = 0;
   keys.forEach(([lbl, n]) => {
     const black = n.includes('#');
@@ -174,10 +186,13 @@ async function connectMidi() {
 
 function setInput(v) {
   input = v;
-  save('input', v);
+  if (!TOUCH) save('input', v);
   document.querySelectorAll('[data-input]').forEach((b) => b.classList.toggle('active', b.dataset.input === v));
   buildPiano();
   reset('idle');
+  if (TOUCH) return setStatus(v === 'midi'
+    ? 'Màn ngang: đánh <b>hai tay</b> trên phím — chọn Tay phải / Tay trái / Hai tay ở thanh nút.'
+    : 'Màn dọc: dùng hai ngón cái đánh <b>tay phải</b>, bàn phím tự trượt tới phím cần bấm. Quay ngang để đánh hai tay.');
   if (v === 'midi') connectMidi();
   setStatus(v === 'midi'
     ? 'Chế độ <b>Đàn MIDI</b>: chọn tay muốn luyện, đánh theo tên nốt rơi xuống (quãng tám nào cũng được).'
@@ -502,7 +517,9 @@ document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('acti
 SONGS.forEach((x, i) => $('song').add(new Option(`${x.title} · ${x.artist}`, i)));
 $('song').value = SONGS.indexOf(song);
 $('song').onchange = (e) => { e.target.blur(); setSong(+e.target.value); };
-setInput(input);
+document.body.classList.toggle('touch', TOUCH);
+setInput(TOUCH ? touchInput() : input);
+landscape.onchange = () => { if (TOUCH) setInput(touchInput()); };
 setSong(SONGS.indexOf(song));
 $('tempo').oninput = (e) => { song.bpm = +e.target.value; $('tempoOut').textContent = song.bpm; };
 $('tempo').onchange = (e) => e.target.blur();
@@ -520,5 +537,14 @@ document.querySelectorAll('.toggle-btn').forEach((b) => {
   b.onclick = () => { b.blur(); b.setAttribute('aria-pressed', String(!isOn(b.id))); save(b.id, String(isOn(b.id))); sync(); };
 });
 sync();
+// Collapse arrow: hide the control bars above the piano, keep the seek bar and play controls
+const setCollapsed = (on) => {
+  document.body.classList.toggle('collapsed', on);
+  $('collapseBtn').setAttribute('aria-expanded', String(!on));
+  $('collapseBtn').title = on ? 'Hiện các nút chức năng' : 'Ẩn các nút chức năng';
+  save('collapsed', String(on));
+};
+$('collapseBtn').onclick = (e) => { e.currentTarget.blur(); setCollapsed(!document.body.classList.contains('collapsed')); };
+setCollapsed(saved('collapsed', ['true', 'false']) === 'true');
 requestAnimationFrame(frame);
 try { if (!localStorage.getItem('seenGuide4')) { $('guide').showModal(); localStorage.setItem('seenGuide4', '1'); } } catch {}

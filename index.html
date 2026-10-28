@@ -4,10 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#0f1216">
+<meta name="color-scheme" content="dark">
 <title>Grand Piano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 </head>
 <body>
 <header class="top">
@@ -48,6 +49,8 @@
 </section>
 
 <div class="seekrow">
+  <button class="tbtn" id="collapseBtn" aria-label="Ẩn / hiện các nút chức năng" aria-expanded="true">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.4 15.4 12 9.8l5.6 5.6 1.4-1.4-7-7-7 7z"/></svg></button>
   <div class="progress" id="seek" role="slider" aria-label="Tua bài (phím ← →)" aria-valuemin="1" title="Kéo để tua"><div id="bar"></div></div>
   <span class="where" id="where"></span>
   <div class="transport">
@@ -107,7 +110,9 @@
     <li><b>Gõ nhịp:</b> khi Nghe mẫu sẽ có tiếng tích tắc mỗi phách, tiếng cao là phách 1 — đếm theo trước khi vào bài.</li>
     <li><b>Tư thế tay:</b> đặt 8 ngón lên <kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>F</kbd> — <kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>;</kbd> như khi gõ chữ (phím F và J có gờ để định vị). Ngón cái nghỉ trên Space.</li>
     <li><b>Điện thoại:</b> chạm trực tiếp lên phím đàn trên màn hình. Cầm <b>dọc</b>: nốt rơi ở trên, bàn phím ở dưới, tự trượt tới phím cần bấm (vuốt ngang trên dải nốt để xem phím khác).
-      Quay <b>ngang</b>: hiện đủ 11 phím trắng Sol → Đô, phím to để đánh bằng nhiều ngón.</li>
+      Quay <b>ngang</b>: bàn phím đầy đủ để đánh <b>hai tay</b> như đàn MIDI (điện thoại hiện 3 quãng tám Đô3 → Đô6; tablet hiện đủ). Chọn Tay phải / Tay trái / Hai tay ở thanh nút.
+      Cầm dọc thì chỉ hiện vài phím to để gõ bằng hai ngón cái.</li>
+    <li><b>Ẩn nút chức năng:</b> bấm mũi tên ở đầu thanh tua để ẩn các nút phía trên, chỉ giữ thanh tua và nút chạy/dừng — bấm lần nữa để hiện lại.</li>
     <li>Giữ phím để ngân dài, thả ra để tắt tiếng. Có thể bấm nhiều phím cùng lúc thành hợp âm. Click chuột / chạm vào phím đàn cũng được.</li>
     <li><b>Luyện bài:</b>
       ① chọn đoạn (Cả bài hoặc Đoạn 1–13, mỗi đoạn ~20 giây của video) ·
@@ -120,7 +125,7 @@
   <form method="dialog"><button class="btn primary">Đã hiểu</button></form>
 </dialog>
 
-<script src="data.js?v=4"></script>
-<script src="app.js?v=4"></script>
+<script src="data.js?v=5"></script>
+<script src="app.js?v=5"></script>
 </body>
 </html>

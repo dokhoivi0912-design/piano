@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark; /* native controls (selects, sliders, scrollbars) dark on every OS, and no browser auto-dark recolouring */
   --bg: #0f1216;
   --panel: #171b21;
   --raised: #1d222a;
@@ -169,19 +170,42 @@ body { padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(saf
 /* Phones turned sideways: song + toolbar share one row, no status text, the whole range G4–C6 fits so keys are big */
 @media (orientation: landscape) and (max-height: 500px) {
   body { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); }
-  .top { grid-column: 1; flex-wrap: nowrap; border: 0; padding: 6px 4px 6px 10px; }
+  .top { grid-column: 1; grid-row: 1; flex-wrap: nowrap; border: 0; padding: 6px 4px 6px 10px; }
   #song { flex: none; max-width: 230px; font-size: 14px; padding: 4px 34px 4px 12px; }
   nav { flex-basis: auto; }
   nav .seg { display: none; }
-  .toolbar { grid-column: 2; padding: 6px 10px 6px 4px; }
+  .toolbar { grid-column: 2; grid-row: 1; padding: 6px 10px 6px 4px; }
   .btn { min-height: 34px; padding: 5px 12px; font-size: 13px; }
-  .seekrow { grid-column: 1 / -1; padding: 2px 6px 2px 14px; }
+  .seekrow { grid-column: 1 / -1; grid-row: 2; padding: 2px 6px 2px 14px; }
   .progress { padding: 6px 0; }
   .tbtn { width: 34px; height: 34px; } .tbtn.play { width: 40px; height: 40px; }
   .statusline { display: none; }
-  .piano-wrap { grid-column: 1 / -1; min-height: 0; margin: 4px 6px 6px; }
+  .piano-wrap { grid-column: 1 / -1; grid-row: 3; min-height: 0; margin: 4px 6px 6px; }
   body:not(.midi-mode) .stage > * { min-width: 0; }
   body:not(.midi-mode) .piano { height: 58%; }
   #fall { min-height: 60px; }
 }
+/* Collapsed: only the seek bar + transport above the piano */
+#collapseBtn svg { transition: transform .2s; }
+body.collapsed #collapseBtn svg { transform: rotate(180deg); }
+body.collapsed .top, body.collapsed .toolbar, body.collapsed .statusline { display: none !important; }
+body.collapsed .seekrow { margin-top: 8px; }
+
+/* Touch screens: the mode follows how the device is held, so the keyboard / MIDI switch is hidden */
+body.touch nav .seg { display: none; }
+body.touch .tip { display: none !important; }
+/* upright: a few big keys for two thumbs — 6 white keys across a phone, 8 across a tablet; the strip scrolls */
+body.touch:not(.midi-mode) { --kw: calc((100vw - 28px) / 6); --black-w: calc(var(--kw) * .6); }
+@media (min-width: 600px) { body.touch:not(.midi-mode) { --kw: calc((100vw - 48px) / 8); } }
+body.touch:not(.midi-mode) .stage > * { min-width: calc(var(--whites) * (var(--kw) + 2px)); }
+body.touch:not(.midi-mode) .white { flex: 0 0 var(--kw); }
+body.touch:not(.midi-mode) .piano { height: clamp(170px, 34vh, 360px); }
+body.touch:not(.midi-mode) .key .nm { font-size: 13px; margin-bottom: 14px; opacity: .8; }
+/* sideways: every key on screen for two hands */
+body.touch.midi-mode .stage > * { min-width: 0; }
+body.touch.midi-mode .white { flex: 1 0 0; }
+body.touch.midi-mode { --black-w: calc((100vw - 40px) / var(--whites, 22) * .62); }
+body.touch.midi-mode .piano { height: clamp(120px, 42vh, 320px); }
+body.touch.midi-mode .black .nm { display: none; }
+
 body.level-orig #pattern { display: none; }
