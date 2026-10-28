@@ -189,11 +189,17 @@ function setLevel(v) {
   level = v;
   save('level', v);
   document.querySelectorAll('[data-level]').forEach((b) => b.classList.toggle('active', b.dataset.level === v));
+  // each version has its own sections and default tempo
+  const part = $('part');
+  part.length = 1; // keep "Cả bài"
+  (v === 'easy' ? SONG.sections : SONG.sheet.form).forEach((s) => part.add(new Option(s.name, s.name)));
+  SONG.bpm = v === 'easy' ? 85 : SONG.sheet.bpm;
+  $('tempo').value = SONG.bpm; $('tempoOut').textContent = SONG.bpm;
   if (input === 'midi') buildPiano(); // the key range depends on the version
   loadSong();
   setStatus(v === 'easy'
     ? 'Bản <b>Dễ</b>: giai điệu đủ nốt, nhịp móc đơn, tay trái là hợp âm 3 nốt theo nhịp 4/4.'
-    : 'Bản <b>Gốc</b>: giai điệu theo nhịp video (có nốt luyến) · tay trái: <b>Verse</b> hợp âm khối, <b>Điệp khúc</b> rải legato.');
+    : 'Bản <b>Gốc</b>: chép theo sheet piano (♩ = 92) — đủ bài Intro → Verse → Điệp khúc → Refrain → Bridge… như sheet.');
 }
 
 // ---------- Song state ----------
@@ -415,7 +421,6 @@ function frame(now) {
 }
 
 // ---------- Init ----------
-SONG.sections.forEach((s) => $('part').add(new Option(s.name, s.name)));
 document.querySelectorAll('[data-input]').forEach((b) => { b.onclick = () => { b.blur(); setInput(b.dataset.input); }; });
 document.querySelectorAll('[data-level]').forEach((b) => { b.onclick = () => { b.blur(); setLevel(b.dataset.level); }; });
 $('pattern').value = pattern;
@@ -428,7 +433,7 @@ document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('acti
 $('songTitle').textContent = SONG.title;
 const info = () => {
   const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
-  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ' : 'bản gốc: verse khối, điệp khúc rải'} · nhịp 4/4 (Đô trưởng)`;
+  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ' : 'bản gốc theo sheet piano'} · nhịp 4/4 (Đô trưởng)`;
 };
 setInput(input);
 setLevel(level);

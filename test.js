@@ -51,11 +51,11 @@ test('sections are labelled verse / chorus / outro', () => {
 });
 
 test('songEvents(section) keeps beat 1 on a bar line', () => {
-  for (const level of ['easy', 'orig']) {
+  for (const [level, names] of [['easy', SONG.sections.map((x) => x.name)], ['orig', SONG.sheet.form.map((x) => x.name)]]) {
     let total = 0;
-    for (const x of SONG.sections) {
-      const ev = songEvents(x.name, level);
-      assert.ok(ev.length > 0, x.name);
+    for (const name of names) {
+      const ev = songEvents(name, level);
+      assert.ok(ev.length > 0, name);
       assert.ok(Math.min(...ev.map((e) => e.start)) < 4);
       total += ev.length;
     }
@@ -124,32 +124,49 @@ test('easy right hand: every melody note kept, 8th grid, one octave, legato', ()
   });
 });
 
-test('original right hand: 16th grid, one octave, as played', () => {
-  const rh = songEvents(undefined, 'orig').filter((e) => e.hand === 'R');
-  assert.ok(rh.length >= 450, `only ${rh.length} notes`);
-  rh.forEach((e, i) => {
-    assert.ok(inOctave(e.notes[0]), e.notes[0]);
-    assert.strictEqual(e.start * 4 % 1, 0, `start ${e.start} not on a 16th`);
-    if (i) assert.ok(e.start > rh[i - 1].start);
-  });
+test('original version follows the sheet form with its repeats', () => {
+  const { form, bars } = SONG.sheet;
+  assert.strictEqual(SONG.sheet.bpm, 92);
+  assert.deepStrictEqual(form.map((x) => x.name), [
+    'Intro', 'Verse 1', 'Điệp khúc', 'Refrain', 'Interlude', 'Verse 2',
+    'Điệp khúc 2', 'Refrain 2', 'Bridge', 'Điệp khúc 3', 'Refrain 3', 'Outro']);
+  assert.deepStrictEqual(form[1].bars, [9, 10, 11, 12, 13, 14, 15, 16, 9, 10, 11, 12, 13, 14, 15, 17]);
+  assert.deepStrictEqual(form[7].bars.slice(-1), [47]);
+  assert.strictEqual(form.reduce((a, x) => a + x.bars.length, 0), 96);
+  form.forEach((x) => x.bars.forEach((n) => assert.ok(bars[n], `bar ${n} missing`)));
 });
 
-test('original left hand: block chords in verses, legato arpeggio in choruses, never more than 3 notes', () => {
-  for (const x of SONG.sections) {
-    const lh = songEvents(x.name, 'orig').filter((e) => e.hand === 'L');
-    assert.ok(lh.length > 0, x.name);
-    lh.forEach((e) => assert.ok(e.notes.length <= 3));
-    if (x.part === 'chorus') assert.ok(lh.every((e) => e.notes.length === 1), `${x.name} should be arpeggiated`);
-    else assert.ok(lh.every((e) => e.notes.length === 3), `${x.name} should be block chords`);
+test('sheet bars add up: left hand fills 4 beats, chords are known, at most 3 notes at once', () => {
+  const NAMES_OK = ['C', 'Dm', 'Em', 'F', 'G', 'Am', 'Csus4'];
+  for (const [n, bar] of Object.entries(SONG.sheet.bars)) {
+    bar.chords.split(' ').forEach((c) => assert.ok(NAMES_OK.includes(c), `bar ${n}: chord ${c}`));
+    const ends = bar.lh.map(([, st, len]) => st + len);
+    assert.strictEqual(Math.max(...ends), 4, `bar ${n}: left hand does not end on beat 4`);
+    bar.lh.forEach(([notes]) => assert.ok(notes.split(' ').length <= 3, `bar ${n}: ${notes}`));
+    bar.rh.forEach(([note, st, len]) => {
+      assert.ok(st >= -1 && st < 4 && len > 0, `bar ${n}: ${note} at ${st}`);
+      assert.ok(noteToMidi(note) >= noteToMidi('E4') && noteToMidi(note) <= noteToMidi('B5'), `bar ${n}: ${note}`);
+    });
   }
 });
 
-test('legato arpeggio pattern: root-3-5-3 in 8ths, each note held to the end of the half bar', () => {
-  const arp = accompany([['C', 0, 2], ['F', 2, 4]], 'arp');
-  assert.deepStrictEqual(arp.slice(0, 4).map((e) => [e.notes[0], e.start, e.b]),
-    [['C3', 0, 2], ['E3', 0.5, 1.5], ['G3', 1, 1], ['E3', 1.5, 0.5]]);
-  assert.strictEqual(arp.length, 12); // F lasts a whole bar = two half bars
-  assert.deepStrictEqual(arp.filter((e) => e.chord).map((e) => e.chord), ['C', 'F']);
+test('original right hand is one melody line with no counting errors', () => {
+  const rh = songEvents(undefined, 'orig').filter((e) => e.hand === 'R');
+  assert.ok(rh.length > 600, `only ${rh.length} notes`);
+  let gaps = 0;
+  rh.forEach((e, i) => {
+    const next = rh[i + 1];
+    if (!next) return;
+    const end = Math.round((e.start + e.b) * 1000) / 1000;
+    assert.ok(end <= next.start + 1e-9, `${e.notes[0]} at ${e.start} overlaps ${next.notes[0]} at ${next.start}`);
+    gaps += next.start - end;
+  });
+  assert.ok(gaps < 3, `${gaps} beats of unexpected rests`);
+});
+
+test('original left hand shows the sheet chord names', () => {
+  const lh = songEvents('Intro', 'orig').filter((e) => e.hand === 'L' && e.chord);
+  assert.deepStrictEqual(lh.map((e) => e.chord).slice(0, 7), ['F', 'G', 'Em', 'Am', 'F', 'G', 'C']);
 });
 
 test('easy version: basic triads that fill every bar', () => {
