@@ -6,7 +6,7 @@
 <title>Grand Piano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <header class="top">
@@ -54,6 +54,15 @@
 <div class="seekrow">
   <div class="progress" id="seek" role="slider" aria-label="Tua bài (phím ← →)" aria-valuemin="1" title="Kéo để tua"><div id="bar"></div></div>
   <span class="where" id="where"></span>
+  <div class="transport">
+    <button class="tbtn" id="backBtn" aria-label="Tua lùi 1 ô nhịp" title="Tua lùi 1 ô (←)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
+    <button class="tbtn play" id="playBtn" aria-label="Chạy / dừng" title="Chạy / dừng">
+      <svg class="i-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="i-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg></button>
+    <button class="tbtn" id="fwdBtn" aria-label="Tua tới 1 ô nhịp" title="Tua tới 1 ô (→)">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
+  </div>
 </div>
 <div class="statusline">
   <p class="status" id="status" aria-live="polite">Bấm <b>Nghe mẫu</b> để nghe trước, rồi <b>Bắt đầu luyện</b> — nốt sẽ rơi xuống đúng phím cần bấm.</p>
@@ -107,13 +116,13 @@
       ② bấm <i>Nghe mẫu</i> để quen giai điệu ·
       ③ bấm <i>Bắt đầu luyện</i>: nốt vàng rơi xuống đúng cột phím cần bấm và <b>đứng chờ</b> ở phím đàn cho tới khi bạn bấm đúng.
       Chữ trên nốt rơi là phím máy tính cần bấm. Nốt càng dài thì giữ càng lâu. Bấm sai thì phím nháy đỏ.</li>
-    <li>Luyện xong muốn luyện lại? Bấm <kbd>Enter</kbd> — không cần lướt tìm nút. <b>Tua:</b> bấm hoặc kéo trên thanh tiến độ, hoặc <kbd>←</kbd> <kbd>→</kbd> để lùi/tới 1 ô nhịp (giữ <kbd>Shift</kbd> = 4 ô), <kbd>Home</kbd> về đầu bài. Luyện lại bằng Enter sẽ bắt đầu từ chỗ vừa tua. Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
+    <li>Luyện xong muốn luyện lại? Bấm <kbd>Enter</kbd> — không cần lướt tìm nút. <b>Tua:</b> bấm hoặc kéo trên thanh tiến độ, dùng nút ⏮ ⏭ bên phải thanh (nút giữa là chạy / dừng), hoặc <kbd>←</kbd> <kbd>→</kbd> để lùi/tới 1 ô nhịp (giữ <kbd>Shift</kbd> = 4 ô), <kbd>Home</kbd> về đầu bài. Luyện lại bằng Enter sẽ bắt đầu từ chỗ vừa tua. Quên nốt? Bấm <kbd>Space</kbd> để nghe gợi ý. Cuối bài sẽ có thống kê số lần sai và thời gian.</li>
     <li>Mẹo: luyện chậm từng đoạn trước, thuộc rồi mới tăng tốc độ. Nếu phím không kêu, thử tắt bộ gõ tiếng Việt.</li>
   </ol>
   <form method="dialog"><button class="btn gold">Đã hiểu</button></form>
 </dialog>
 
-<script src="data.js"></script>
-<script src="app.js"></script>
+<script src="data.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

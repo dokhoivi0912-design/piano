@@ -111,7 +111,7 @@ function buildPiano() {
 function press(n) {
   noteOn(n);
   keyEls[n]?.classList.add('on');
-  if (mode === 'practice') checkPractice(n);
+  if (mode === 'practice' && !paused) checkPractice(n);
 }
 function release(n) {
   noteOff(n);
@@ -125,7 +125,7 @@ addEventListener('keydown', (e) => {
   const jump = { ArrowLeft: -4, ArrowRight: 4 }[e.code];
   if (jump && !(e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement)) {
     e.preventDefault();
-    return seek(Math.max(startAt, Math.floor(Math.max(pos, 0) / 4) * 4) + jump * (e.shiftKey ? 4 : 1));
+    return skip(jump * (e.shiftKey ? 4 : 1));
   }
   if (e.code === 'Home') { e.preventDefault(); return seek(0); }
   if (e.code === 'Enter' && !e.repeat && !(e.target instanceof HTMLSelectElement)) { e.preventDefault(); return startPractice(); }
@@ -226,13 +226,14 @@ let pos = 0;       // song position in beats; an event touches the keys when pos
 let wrong = 0, t0 = 0, lastBeat = 0;
 let startAt = 0;   // bar line (in beats) where practice / demo begins; moved by seeking
 let startIdx = 0;  // first practice step at or after startAt
+let paused = false, lastMode = 'practice'; // play/pause button state; play from idle restarts the last mode
 let sounding = []; // auto-played notes still ringing: { n, lane, end }
 const leadIn = () => $('fall').clientHeight / BEAT_PX;
 const setStatus = (html) => { $('status').innerHTML = html; };
 
 function reset(newMode) {
   sounding.forEach((s) => release(s.n));
-  sounding = []; mode = newMode; idx = 0; autoIdx = 0; wrong = 0; t0 = 0;
+  sounding = []; mode = newMode; paused = false; if (newMode !== 'idle') lastMode = newMode; idx = 0; autoIdx = 0; wrong = 0; t0 = 0;
   const hands = practisedHands();
   steps = practiceSteps(events, hands);
   steps.forEach((s) => {
@@ -337,10 +338,22 @@ function seek(beat) {
     pos = startAt;
     return setStatus(`Tua tới <b>ô ${barNo(startAt)}</b> — bấm <kbd>Enter</kbd> để luyện hoặc <b>Nghe mẫu</b> để nghe từ đây.`);
   }
-  const m = mode;
+  const m = mode, wasPaused = paused;
   reset(m);
+  paused = wasPaused; // seeking while paused stays paused, like a music player
   setStatus(`Tua tới <b>ô ${barNo(startAt)}</b>${m === 'practice' && steps[idx] ? ` — ${describe(steps[idx])}` : ''}`);
 }
+// jump from the current bar (or the seek point, during the lead-in) by `beats`
+const skip = (beats) => seek(Math.max(startAt, Math.floor(Math.max(pos, 0) / 4) * 4) + beats);
+function playPause() {
+  if (mode === 'idle') return lastMode === 'demo' ? toggleDemo() : startPractice();
+  paused = !paused;
+  if (paused) { sounding.forEach((x) => release(x.n)); sounding = []; }
+  setStatus(paused ? 'Đã dừng — bấm <b>▶</b> để chạy tiếp.' : 'Chạy tiếp.');
+}
+$('backBtn').onclick = (e) => { e.currentTarget.blur(); skip(-4); };
+$('fwdBtn').onclick = (e) => { e.currentTarget.blur(); skip(4); };
+$('playBtn').onclick = (e) => { e.currentTarget.blur(); playPause(); };
 const seekBar = $('seek');
 const seekAt = (e) => { const r = seekBar.getBoundingClientRect(); seek(((e.clientX - r.left) / r.width) * songEnd()); };
 seekBar.onpointerdown = (e) => { seekBar.setPointerCapture(e.pointerId); seekAt(e); };
@@ -352,7 +365,7 @@ seekBar.onpointermove = (e) => {
 
 // ---------- Falling notes ----------
 function tick(dt) {
-  if (mode === 'idle') return;
+  if (mode === 'idle' || paused) return;
   const bps = song.bpm / 60, s = mode === 'practice' && steps[idx];
   if (s) {
     // fall at tempo, wait at the keys until the step is hit, catch up quickly if the player is ahead
@@ -389,6 +402,7 @@ function draw() {
   $('bar').style.width = `${(p / end) * 100}%`;
   $('where').textContent = `Ô ${barNo(p)} / ${barNo(end - 0.01)}`;
   seekBar.setAttribute('aria-valuenow', barNo(p));
+  $('playBtn').classList.toggle('playing', mode !== 'idle' && !paused);
   const c = $('fall'), dpr = devicePixelRatio || 1, W = c.clientWidth, H = c.clientHeight;
   if (c.width !== W * dpr || c.height !== H * dpr) { c.width = W * dpr; c.height = H * dpr; }
   const g = c.getContext('2d');
