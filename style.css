@@ -122,3 +122,4 @@ kbd { display: inline-block; min-width: 24px; text-align: center; padding: 1px 6
   nav { flex-wrap: wrap; }
 }
 body.level-orig #pattern { display: none; }
+#song { margin-left: 6px; background: var(--panel, #111); color: var(--gold); border: 1px solid currentColor; border-radius: 6px; font: inherit; letter-spacing: normal; text-transform: none; padding: 2px 4px; }

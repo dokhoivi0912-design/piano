@@ -2,7 +2,7 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const {
-  KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass,
+  KEYMAP, SONG, SONGS, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass,
   songEvents, practiceSteps, matchKey, solfege, chordNotes, accompany,
 } = require('./data.js');
 
@@ -181,4 +181,23 @@ test('easy version: basic triads that fill every bar', () => {
     const lh = songEvents(SONG.sections[1].name, 'easy', p).filter((e) => e.hand === 'L');
     assert.ok(lh.length > 0, p);
   }
+});
+
+test('Một Nhà: sheet bars add up and the D.S. form is written out', () => {
+  const mn = SONGS.find((x) => x.title === 'Một Nhà');
+  assert.strictEqual(mn.sheet.bpm, 95);
+  assert.strictEqual(mn.sheet.form.reduce((a, x) => a + x.bars.length, 0), 4 + 24 + 24 + 5);
+  for (const [n, b] of Object.entries(mn.sheet.bars)) {
+    assert.strictEqual(Math.max(...b.lh.map(([, st, len]) => st + len)), 4, `bar ${n}: left hand`);
+    if (b.rh.length && n > 4) assert.strictEqual(b.rh.at(-1)[1] + b.rh.at(-1)[2] >= 4, true, `bar ${n}: right hand ends early`);
+  }
+  const rh = songEvents(undefined, 'orig', 'block', mn).filter((e) => e.hand === 'R' && e.start >= 16);
+  rh.forEach((e, i) => {
+    const next = rh[i + 1];
+    if (next) assert.ok(e.start + e.b <= next.start + 1e-9, `${e.notes[0]} at ${e.start} overlaps`);
+  });
+  // easy: same melody, triads from the chord names
+  const easy = songEvents(undefined, 'easy', 'beats', mn);
+  assert.deepStrictEqual(easy.filter((e) => e.hand === 'R'), songEvents(undefined, 'orig', 'block', mn).filter((e) => e.hand === 'R'));
+  easy.filter((e) => e.hand === 'L').forEach((e) => assert.strictEqual(e.notes.length, 3));
 });

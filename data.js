@@ -305,6 +305,72 @@ SONG.sheet = {
   ],
 };
 
+// Second song: "Một Nhà" (Da LAB), transcribed from a piano sheet in C major (♩ = 95). Same bar format as above.
+// The left hand is root + (fifth, octave) in 8ths; the grace note in bar 11 is left out.
+const MN_LH = { C: ['C3', 'G3 C4'], G: ['G2', 'D3 G3'], Am: ['A2', 'E3 A3'], F: ['F2', 'C3 F3'] };
+const mnLH = (...names) => names.flatMap((c, h) => Array.from({ length: 8 / names.length }, (_, i) => [MN_LH[c][i % 2], (h * 8 / names.length + i) * 0.5, 0.5]));
+const mnChord = (notes, b) => notes.split(' ').map((n) => [n, 0, b]);
+// Beats 2-3 of a chorus bar: an 8th and two 16ths, twice.
+const mnRun = (a, b, c, d) => [[a, 1, 0.5], [a, 1.5, 0.25], [b, 1.75, 0.25], [c, 2, 0.5], [c, 2.5, 0.25], [d, 2.75, 0.25]];
+const MN_BARS = {
+  1: bar('C', mnChord('G4 C5 E5', 4), [['C3', 0, 4]]),
+  2: bar('G', mnChord('G4 B4 D5', 4), [['G3', 0, 4]]),
+  3: bar('Am', mnChord('A4 C5 E5', 4), [['A2', 0, 4]]),
+  4: bar('F', mnChord('F4 A4 C5', 4), [['F3', 0, 4]]),
+  5: bar('C', [['E5', 2, 0.5], ['E5', 2.5, 0.5], ['E5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('C')),
+  6: bar('G', [['C5', 0, 0.5], ['B4', 0.5, 1.5], ['D5', 2, 0.5], ['C5', 2.5, 0.5], ['B4', 3, 0.5], ['B4', 3.5, 0.5]], mnLH('G')),
+  7: bar('Am', [['B4', 0, 0.5], ['A4', 0.5, 1.5], ['C5', 2, 0.5], ['C5', 2.5, 0.5], ['C5', 3, 0.5], ['G4', 3.5, 0.5]], mnLH('Am')),
+  8: bar('F', [['A4', 0, 0.5], ['C5', 0.5, 1.5], ['E5', 2, 0.5], ['E5', 2.5, 0.5], ['D5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('F')),
+  9: bar('C', [['C5', 0, 2], ['E5', 2, 0.5], ['E5', 2.5, 0.5], ['E5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('C')),
+  10: bar('G', [['C5', 0, 0.5], ['B4', 0.5, 1.5], ['D5', 2, 0.5], ['D5', 2.5, 0.5], ['D5', 3, 0.5], ['D5', 3.5, 0.5]], mnLH('G')),
+  11: bar('Am', [['G5', 0, 0.5], ['E5', 0.5, 1.5], ['E5', 2, 0.5], ['E5', 2.5, 0.5], ['C5', 3, 0.5], ['G4', 3.5, 1]], mnLH('Am')),
+  12: bar('F', [['A4', 0.5, 1.5], ['E5', 2, 0.75], ['D5', 2.75, 0.25], ['D5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('F')),
+  13: bar('C', [['C5', 0, 1], ['E5', 1.5, 0.25], ['E5', 1.75, 0.25], ['E5', 2, 0.5], ['E5', 2.5, 0.5], ['E5', 3, 0.5], ['D5', 3.5, 0.5]], mnLH('C')),
+  14: bar('G', [['D5', 0, 1.5], ['D5', 1.5, 0.25], ['C5', 1.75, 0.25], ['D5', 2, 0.5], ['D5', 2.5, 0.5], ['E5', 3, 0.5], ['C5', 3.5, 0.25],
+    ['A4', 3.75, 1.75]], mnLH('G')),
+  15: bar('Am', [['E5', 1.5, 0.25], ['D5', 1.75, 0.25], ['D5', 2, 0.5], ['D5', 2.5, 0.25], ['E5', 2.75, 0.25], ['D5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('Am')),
+  16: bar('F', [['F5', 0, 1], ['E5', 1, 1], ['E5', 2, 0.5], ['B4', 2.5, 0.25], ['C5', 2.75, 0.75], ['D5', 3.5, 0.5]], mnLH('F')),
+  17: bar('C', [['C5', 0, 1.5], ['E5', 1.5, 0.25], ['D5', 1.75, 0.25], ['E5', 2, 0.5], ['E5', 2.5, 0.25], ['D5', 2.75, 0.25], ['E5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('C')),
+  18: bar('G', [['D5', 0, 1.5], ['D5', 1.5, 0.25], ['D5', 1.75, 0.25], ['G5', 2, 0.5], ['G5', 2.5, 0.25], ['A5', 2.75, 0.25], ['G5', 3, 0.5], ['A5', 3.5, 0.5]], mnLH('G')),
+  19: bar('Am', [['E5', 0, 1.5], ['E5', 1.5, 0.25], ['D5', 1.75, 0.25], ['D5', 2, 0.5], ['D5', 2.5, 0.25], ['E5', 2.75, 0.25], ['D5', 3, 0.5], ['C5', 3.5, 0.5]], mnLH('Am')),
+  20: bar('F', [['F5', 0, 1], ['E5', 1, 0.5], ['E5', 1.5, 0.5], ['B4', 2, 0.5], ['B4', 2.5, 0.25], ['C5', 2.75, 0.25], ['C5', 3, 0.25], ['D5', 3.25, 0.5],
+    ['C5', 3.75, 0.75]], mnLH('F')),
+  21: bar('C', [['E5', 0.5, 0.25], ['D5', 0.75, 0.25], ...mnRun('E5', 'D5', 'E5', 'D5'), ['E5', 3, 0.25], ['D5', 3.25, 0.5], ['D5', 3.75, 0.75]], mnLH('C')),
+  22: bar('G', [['D5', 0.5, 0.25], ['C5', 0.75, 0.25], ...mnRun('D5', 'C5', 'D5', 'D5'), ['E5', 3, 0.25], ['C5', 3.25, 0.5], ['C5', 3.75, 0.75]], mnLH('G')),
+  23: bar('Am', [['E5', 0.5, 0.25], ['D5', 0.75, 0.25], ...mnRun('E5', 'D5', 'E5', 'D5'), ['E5', 3, 0.25], ['D5', 3.25, 0.25], ['C5', 3.5, 0.5]], mnLH('Am')),
+  24: bar('F', [['F5', 0, 1], ['E5', 1, 1], ['E5', 2, 0.5], ['C5', 2.5, 0.25], ['D5', 2.75, 0.5], ['C5', 3.25, 0.5], ['C5', 3.75, 0.75]], mnLH('F')),
+  25: bar('C', [['E5', 0.5, 0.25], ['D5', 0.75, 0.25], ...mnRun('E5', 'D5', 'E5', 'D5'), ['E5', 3, 0.25], ['C5', 3.25, 0.5], ['D5', 3.75, 0.75]], mnLH('C')),
+  26: bar('G', [['D5', 0.5, 0.25], ['C5', 0.75, 0.25], ...mnRun('D5', 'D5', 'D5', 'D5'), ['G5', 3, 0.25], ['A5', 3.25, 0.5], ['E5', 3.75, 0.75]], mnLH('G')),
+  27: bar('Am', [['E5', 0.5, 0.25], ['D5', 0.75, 0.25], ...mnRun('E5', 'D5', 'E5', 'D5'), ['E5', 3, 0.25], ['D5', 3.25, 0.25], ['C5', 3.5, 0.5]], mnLH('Am')),
+  28: bar('F', [['F5', 0, 1], ['E5', 1, 1], ['E5', 2, 0.5], ['C5', 2.5, 0.25], ['D5', 2.75, 0.5], ['C5', 3.25, 0.5], ['C5', 3.75, 0.25]], mnLH('F')),
+  29: bar('C', [], mnLH('C')),
+  30: bar('G', [], mnLH('G')),
+  31: bar('Am', [], mnLH('Am')),
+  32: bar('F G', [], mnLH('F', 'G')),
+  33: bar('C', [], [['C3 G3 C4', 0, 4]]),
+};
+const MOT_NHA = {
+  title: 'Một Nhà',
+  artist: 'Da LAB',
+  bpm: 95,
+  sheet: {
+    bpm: 95,
+    bars: MN_BARS,
+    // D.S. after bar 28 goes back to the segno at bar 5; the second time through continues to the ending at bar 29
+    form: [
+      { name: 'Intro', bars: range(1, 4) },
+      { name: 'Verse 1', bars: range(5, 12) },
+      { name: 'Verse 1b', bars: range(13, 20) },
+      { name: 'Điệp khúc', bars: range(21, 28) },
+      { name: 'Verse 2', bars: range(5, 12) },
+      { name: 'Verse 2b', bars: range(13, 20) },
+      { name: 'Điệp khúc 2', bars: range(21, 28) },
+      { name: 'Kết', bars: range(29, 33) },
+    ],
+  },
+};
+const SONGS = [SONG, MOT_NHA];
+
 // Root-position triads (root in octave 3).
 const TRIADS = { C: ['C3', 'E3', 'G3'], Dm: ['D3', 'F3', 'A3'], Em: ['E3', 'G3', 'B3'], F: ['F3', 'A3', 'C4'], G: ['G3', 'B3', 'D4'], Am: ['A3', 'C4', 'E4'] };
 const chordNotes = (name) => TRIADS[name];
@@ -331,21 +397,25 @@ const easyEvents = (s, pattern) => [
   ...s.easy.map(([n, start, b], i) => ({ hand: 'R', notes: [n], start, b, section: i === 0 ? s.name : null })),
   ...accompany(s.chords, pattern),
 ];
-const sheetEvents = (part, offset) => part.bars.flatMap((n, k) => {
-  const { chords, rh, lh } = SONG.sheet.bars[n], t = offset + k * 4;
+// A song with only a sheet gets its easy version from the sheet: same right hand, triads from the chord names on the left.
+const sheetEvents = (song, part, offset, easyPattern) => part.bars.flatMap((n, k) => {
+  const { chords, rh, lh } = song.sheet.bars[n], t = offset + k * 4;
   const names = chords.split(' '), chordAt = (st) => (names.length === 1 ? (st === 0 ? names[0] : null) : names[[0, 2].indexOf(st)] ?? null);
+  const left = easyPattern
+    ? accompany(names.map((c, i) => [c, t + i * 4 / names.length, 4 / names.length]), easyPattern)
+    : lh.map(([notes, st, b]) => ({ hand: 'L', notes: notes.split(' '), start: t + st, b, chord: chordAt(st) }));
   return [
     ...rh.map(([note, st, b], i) => ({ hand: 'R', notes: [note], start: t + st, b, section: k === 0 && i === 0 ? part.name : null })),
-    ...lh.map(([notes, st, b]) => ({ hand: 'L', notes: notes.split(' '), start: t + st, b, chord: chordAt(st) })),
+    ...left,
   ];
 });
-const songEvents = (section, level = 'easy', pattern = 'block') => {
+const songEvents = (section, level = 'easy', pattern = 'block', song = SONG) => {
   let ev;
-  if (level === 'easy') ev = SONG.sections.filter((s) => !section || s.name === section).flatMap((s) => easyEvents(s, pattern));
+  if (level === 'easy' && song.sections) ev = song.sections.filter((s) => !section || s.name === section).flatMap((s) => easyEvents(s, pattern));
   else {
     let offset = 0;
-    ev = SONG.sheet.form.flatMap((part) => {
-      const out = !section || part.name === section ? sheetEvents(part, offset) : [];
+    ev = song.sheet.form.flatMap((part) => {
+      const out = !section || part.name === section ? sheetEvents(song, part, offset, level === 'easy' && pattern) : [];
       offset += part.bars.length * 4;
       return out;
     });
@@ -374,6 +444,6 @@ const matchKey = (n, input) => (input === 'midi' ? NAMES[noteToMidi(n) % 12] : f
 
 if (typeof module !== 'undefined') {
   module.exports = {
-    KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass, songEvents, practiceSteps, matchKey, solfege, chordNotes, accompany,
+    KEYMAP, SONG, SONGS, noteToFreq, noteToMidi, midiToNote, fitToKeys, samePitchClass, songEvents, practiceSteps, matchKey, solfege, chordNotes, accompany,
   };
 }

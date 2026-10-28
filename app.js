@@ -1,4 +1,4 @@
-/* global KEYMAP, SONG, noteToFreq, noteToMidi, midiToNote, fitToKeys, songEvents, practiceSteps, matchKey, solfege */
+/* global KEYMAP, SONGS, noteToFreq, noteToMidi, midiToNote, fitToKeys, songEvents, practiceSteps, matchKey, solfege */
 const $ = (id) => document.getElementById(id);
 const CODE_OF = Object.fromEntries(Object.entries(KEYMAP).map(([code, n]) => [n, code]));
 const PUNCT = { Semicolon: ';', Quote: "'" };
@@ -15,6 +15,7 @@ input = saved('input', ['keys', 'midi']) || input;
 hand = saved('hand', ['R', 'L', 'RL']) || hand;
 level = saved('level', ['easy', 'orig']) || level;
 pattern = saved('pattern', ['block', 'beats', 'bass']) || pattern;
+let song = SONGS[+saved('song', SONGS.map((_, i) => String(i))) || 0];
 const practisedHands = () => (input === 'midi' ? [...hand] : ['R']);
 const HAND_NAME = { R: 'Tay phải', L: 'Tay trái' };
 // Which on-screen key shows a note. The computer keyboard only has right-hand keys, so the left hand is heard, not drawn.
@@ -78,7 +79,7 @@ function noteOff(n, rel = 0.35) {
 // Keys to draw: the computer keymap, or (MIDI) both hands' real range widened to whole octaves.
 function pianoKeys() {
   if (input === 'keys') return Object.entries(KEYMAP).map(([code, n]) => [label(code), n]);
-  const midi = songEvents(undefined, level, 'bass').flatMap((e) => e.notes.map(noteToMidi));
+  const midi = songEvents(undefined, level, 'bass', song).flatMap((e) => e.notes.map(noteToMidi));
   const lo = Math.min(...midi) - (Math.min(...midi) % 12), hi = Math.max(...midi) + 11 - (Math.max(...midi) % 12);
   return Array.from({ length: hi - lo + 1 }, (_, i) => midiToNote(lo + i)).map((n) => [n.startsWith('C') && !n.includes('#') ? n : '', n]);
 }
@@ -181,7 +182,7 @@ function setHand(v) {
 
 // Version (easy / video original), left-hand pattern and section all decide which events are loaded.
 function loadSong() {
-  events = songEvents($('part').value || undefined, level, pattern);
+  events = songEvents($('part').value || undefined, level, pattern, song);
   document.body.classList.toggle('level-orig', level === 'orig');
   info(); reset('idle');
 }
@@ -192,19 +193,25 @@ function setLevel(v) {
   // each version has its own sections and default tempo
   const part = $('part');
   part.length = 1; // keep "Cả bài"
-  (v === 'easy' ? SONG.sections : SONG.sheet.form).forEach((s) => part.add(new Option(s.name, s.name)));
-  SONG.bpm = v === 'easy' ? 85 : SONG.sheet.bpm;
-  $('tempo').value = SONG.bpm; $('tempoOut').textContent = SONG.bpm;
+  (v === 'easy' && song.sections ? song.sections : song.sheet.form).forEach((s) => part.add(new Option(s.name, s.name)));
+  song.bpm = v === 'easy' && song.sections ? 85 : song.sheet.bpm;
+  $('tempo').value = song.bpm; $('tempoOut').textContent = song.bpm;
   if (input === 'midi') buildPiano(); // the key range depends on the version
   loadSong();
   setStatus(v === 'easy'
     ? 'Bản <b>Dễ</b>: giai điệu đủ nốt, nhịp móc đơn, tay trái là hợp âm 3 nốt theo nhịp 4/4.'
-    : 'Bản <b>Gốc</b>: chép theo sheet piano (♩ = 92) — đủ bài Intro → Verse → Điệp khúc → Refrain → Bridge… như sheet.');
+    : `Bản <b>Gốc</b>: chép theo sheet piano (♩ = ${song.sheet.bpm}) — đủ bài theo thứ tự của sheet.`);
+}
+function setSong(i) {
+  song = SONGS[i];
+  save('song', String(i));
+  $('songTitle').textContent = song.title;
+  setLevel(level);
 }
 
 // ---------- Song state ----------
 const BEAT_PX = 80; // falling speed: pixels per beat
-let events = songEvents();
+let events = songEvents(undefined, level, pattern, song);
 let steps = [];    // what the player must hit, in order (a melody note, a chord, or both hands together)
 let auto = [];     // events the web plays by itself (the other hand, or everything in a demo)
 let mode = 'idle'; // 'idle' | 'practice' | 'demo'
@@ -313,7 +320,7 @@ function toggleDemo() {
 // ---------- Falling notes ----------
 function tick(dt) {
   if (mode === 'idle') return;
-  const bps = SONG.bpm / 60, s = mode === 'practice' && steps[idx];
+  const bps = song.bpm / 60, s = mode === 'practice' && steps[idx];
   if (s) {
     // fall at tempo, wait at the keys until the step is hit, catch up quickly if the player is ahead
     const gap = s.start - pos;
@@ -430,16 +437,16 @@ $('pattern').onchange = (e) => {
 };
 document.querySelectorAll('[data-hand]').forEach((b) => { b.onclick = () => { b.blur(); setHand(b.dataset.hand); }; });
 document.querySelectorAll('[data-hand]').forEach((b) => b.classList.toggle('active', b.dataset.hand === hand));
-$('songTitle').textContent = SONG.title;
+SONGS.forEach((x, i) => $('song').add(new Option(`${x.title} — ${x.artist}`, i)));
+$('song').value = SONGS.indexOf(song);
+$('song').onchange = (e) => { e.target.blur(); setSong(+e.target.value); };
 const info = () => {
   const r = events.filter((e) => e.hand === 'R').length, l = events.length - r;
-  $('songArtist').textContent = `${SONG.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ' : 'bản gốc theo sheet piano'} · nhịp 4/4 (Đô trưởng)`;
+  $('songArtist').textContent = `${song.artist} · ${r} nốt tay phải · ${l} lần bấm tay trái · ${level === 'easy' ? 'bản dễ' : 'bản gốc theo sheet piano'} · nhịp 4/4 (Đô trưởng)`;
 };
 setInput(input);
-setLevel(level);
-$('tempo').value = SONG.bpm;
-$('tempoOut').textContent = SONG.bpm;
-$('tempo').oninput = (e) => { SONG.bpm = +e.target.value; $('tempoOut').textContent = SONG.bpm; };
+setSong(SONGS.indexOf(song));
+$('tempo').oninput = (e) => { song.bpm = +e.target.value; $('tempoOut').textContent = song.bpm; };
 $('tempo').onchange = (e) => e.target.blur();
 $('part').onchange = (e) => {
   e.target.blur(); loadSong();
