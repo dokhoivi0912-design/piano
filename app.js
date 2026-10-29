@@ -548,3 +548,4 @@ $('collapseBtn').onclick = (e) => { e.currentTarget.blur(); setCollapsed(!docume
 setCollapsed(saved('collapsed', ['true', 'false']) === 'true');
 requestAnimationFrame(frame);
 try { if (!localStorage.getItem('seenGuide4')) { $('guide').showModal(); localStorage.setItem('seenGuide4', '1'); } } catch {}
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
