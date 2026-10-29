@@ -201,3 +201,19 @@ test('Một Nhà: sheet bars add up and the D.S. form is written out', () => {
   assert.deepStrictEqual(easy.filter((e) => e.hand === 'R'), songEvents(undefined, 'orig', 'block', mn).filter((e) => e.hand === 'R'));
   easy.filter((e) => e.hand === 'L').forEach((e) => assert.strictEqual(e.notes.length, 3));
 });
+
+test('24H: 44 bars at 120 bpm, one melody line, every left-hand bar fits in 4 beats', () => {
+  const h = SONGS.find((x) => x.title === '24H');
+  assert.strictEqual(h.sheet.bpm, 120);
+  assert.deepStrictEqual(h.sheet.form.flatMap((x) => x.bars), Array.from({ length: 44 }, (_, i) => i + 1));
+  const ev = songEvents(undefined, 'orig', 'block', h);
+  assert.strictEqual(Math.max(...ev.map((e) => e.start + e.b)), 44 * 4);
+  for (const hand of ['R', 'L']) {
+    const line = ev.filter((e) => e.hand === hand);
+    line.forEach((e, i) => {
+      const next = line.slice(i + 1).find((x) => x.start > e.start);
+      if (next) assert.ok(e.start + e.b <= next.start + 1e-9, `${hand} ${e.notes} at bar ${Math.floor(e.start / 4) + 1} overlaps`);
+    });
+  }
+  songEvents(undefined, 'easy', 'bass', h).filter((e) => e.hand === 'L').forEach((e) => assert.ok(e.notes.every(Boolean), e.chord));
+});
